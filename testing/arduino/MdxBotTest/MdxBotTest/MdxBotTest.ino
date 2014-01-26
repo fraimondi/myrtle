@@ -2,8 +2,8 @@
   MdxBotTest
   Test program for MDX platform using Hub-ee wheels
 
-  // connect the left/center/right IR sensors to pins A0/A1/A2
-  // connect the IR LED control to A3
+  // connect the left/center/right IR sensors to pins A1/A2/A3
+  // connect the IR LED control to A0
   // connect the left/right bump switches to A4/A5 (wired to connect to gnd when pressed)
   
   Michael Margolis Jan 16 2014
@@ -28,8 +28,8 @@ const int leftBumpSwPin = A4;
 const int rightBumpSwPin = A5;
 
 const int nbrIrSensors = 3;
-const int IrPins[nbrIrSensors] = {A0,A1,A2};
-const int IrControlPin = A3;
+const int IrPins[nbrIrSensors] = {A1,A2,A3};
+const int IrControlPin = A0;
 
 int irMinReading[nbrIrSensors];
 int irMaxReading[nbrIrSensors];
