@@ -33,6 +33,8 @@ const int IrControlPin = A0;
 
 int irMinReading[nbrIrSensors];
 int irMaxReading[nbrIrSensors];
+int irMinThreshold = 100;
+int irMaxThreshold = 300;
 
 void setup()
 {
@@ -143,7 +145,7 @@ void testIrSensors()
   {
     Serial.print("Sensor "); Serial.print(i); Serial.print(" min = ");
     Serial.print(irMinReading[i]); Serial.print(", max="); Serial.print(irMaxReading[i]);
-    if(irMinReading[i] < 100 && irMaxReading[i] > 500)
+    if(irMinReading[i] < irMinThreshold && irMaxReading[i] > irMaxThreshold)
        Serial.println(" : passed");
     else   
        Serial.println(" ! FAILED");   
