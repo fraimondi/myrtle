@@ -33,8 +33,8 @@ const int IrControlPin = A0;
 
 int irMinReading[nbrIrSensors];
 int irMaxReading[nbrIrSensors];
-int irMinThreshold = 100;
-int irMaxThreshold = 300;
+const int irMinThreshold = 100;
+const int irMaxThreshold = 300;
 
 void setup()
 {
