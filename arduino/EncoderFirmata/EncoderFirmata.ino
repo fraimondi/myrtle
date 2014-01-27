@@ -8,17 +8,14 @@
  */
 
 #include "HUBeeWheel.h"
-
-
 #include <Firmata.h>
 
 
-
-
-/*==============================================================================
- * GLOBAL VARIABLES
- *============================================================================*/
+#define MAX_QUERIES 8
 #define MINIMUM_SAMPLING_INTERVAL 10
+
+#define REGISTER_NOT_SPECIFIED -1
+
 /* analog inputs */
 int analogInputsToReport = 0; // bitwise array to store pin reporting
 
@@ -36,7 +33,6 @@ unsigned long currentMillis;        // store the current value from millis()
 unsigned long previousMillis;       // for comparison with currentMillis
 int samplingInterval = 19;          // how often to run the main loop (in ms)
 
-
 const byte WHEEL1 = 0; // indices for the encoder arrrays
 const byte WHEEL2 = 1;
 
@@ -48,42 +44,8 @@ long spontaneousMsgInterval = 50; // milliseconds between unsolicited messages
 HUBeeBMDWheel wheel_1;
 HUBeeBMDWheel wheel_2;
 
-void initWheels() 
-{
-  wheel_1.setupPins(8,11,9); //setup using pins 12 and 2 for direction control, and 3 for PWM speed control
-  wheel_2.setupPins(12,13,10);//setup using pins 13 and 4 for direction control, and 11 for PWM speed control
-  wheel_1.setDirectionMode(0); //Direction Mode determines how the wheel responds to positive and negative motor power values 
-  wheel_2.setDirectionMode(0);
-  wheel_1.setBrakeMode(0); //Sets the brake mode to zero - freewheeling mode - so wheels are easy to turn by hand
-  wheel_2.setBrakeMode(0); //Sets the brake mode to zero - freewheeling mode - so wheels are easy to turn by hand
-}
 
-void setSpeed( int motor, int speed)
-{
- if ( motor == WHEEL1 ) {
-   wheel_1.setMotorPower(speed);
- }
- if ( motor == WHEEL2 ) {   
-   wheel_2.setMotorPower(speed);  
- } 
-}
-
-void setup()
-{
-   Firmata.attach(ANALOG_MESSAGE, analogWriteCallback);
-  Firmata.attach(DIGITAL_MESSAGE, digitalWriteCallback);
-  Firmata.attach(REPORT_ANALOG, reportAnalogCallback);
-  Firmata.attach(REPORT_DIGITAL, reportDigitalCallback);
-  Firmata.attach(SET_PIN_MODE, setPinModeCallback);
-  encodersBegin();  
-  initWheels();
-  firmataSysexBegin();
-}
-// -----------------------------------------------------------------------------
-/* sets the pin mode to the correct state and sets the relevant bits in the
- * two bit-arrays that track Digital I/O and PWM status
- */
- void outputPort(byte portNumber, byte portValue, byte forceSend)
+void outputPort(byte portNumber, byte portValue, byte forceSend)
 {
   // pins not configured as INPUT are cleared to zeros
   portValue = portValue & portConfigInputs[portNumber];
@@ -93,7 +55,11 @@ void setup()
     previousPINs[portNumber] = portValue;
   }
 }
- void checkDigitalInputs(void)
+
+/* -----------------------------------------------------------------------------
+ * check all the active digital inputs for change of state, then add any events
+ * to the Serial output queue using Serial.print() */
+void checkDigitalInputs(void)
 {
   /* Using non-looping code allows constants to be given to readPort().
    * The compiler will apply substantial optimizations if the inputs
@@ -117,10 +83,14 @@ void setup()
 }
 
 
+// -----------------------------------------------------------------------------
+/* sets the pin mode to the correct state and sets the relevant bits in the
+ * two bit-arrays that track Digital I/O and PWM status
+ */
 void setPinModeCallback(byte pin, int mode)
 {
   
- 
+  
   if (IS_PIN_ANALOG(pin)) {
     reportAnalogCallback(PIN_TO_ANALOG(pin), mode == ANALOG ? 1 : 0); // turn on/off reporting
   }
@@ -145,7 +115,7 @@ void setPinModeCallback(byte pin, int mode)
   case INPUT:
     if (IS_PIN_DIGITAL(pin)) {
       pinMode(PIN_TO_DIGITAL(pin), INPUT); // disable output driver
-      digitalWrite(PIN_TO_DIGITAL(pin), HIGH); // enable internal pull-ups
+      digitalWrite(PIN_TO_DIGITAL(pin), HIGH); // disable internal pull-ups
       pinConfig[pin] = INPUT;
     }
     break;
@@ -163,7 +133,7 @@ void setPinModeCallback(byte pin, int mode)
       pinConfig[pin] = PWM;
     }
     break;
-  
+ 
   default:
     Firmata.sendString("Unknown pin mode"); // TODO: put error msgs in EEPROM
   }
@@ -174,7 +144,6 @@ void analogWriteCallback(byte pin, int value)
 {
   if (pin < TOTAL_PINS) {
     switch(pinConfig[pin]) {
-   
     case PWM:
       if (IS_PIN_PWM(pin))
         analogWrite(PIN_TO_PWM(pin), value);
@@ -183,32 +152,6 @@ void analogWriteCallback(byte pin, int value)
     }
   }
 }
-
-void reportAnalogCallback(byte analogPin, int value)
-{
-  if (analogPin < TOTAL_ANALOG_PINS) {
-    if(value == 0) {
-      analogInputsToReport = analogInputsToReport &~ (1 << analogPin);
-    } else {
-      analogInputsToReport = analogInputsToReport | (1 << analogPin);
-    }
-  }
-  // TODO: save status to EEPROM here, if changed
-}
-
-void reportDigitalCallback(byte port, int value)
-{
-  if (port < TOTAL_PORTS) {
-    reportPINs[port] = (byte)value;
-  }
-  // do not disable analog reporting on these 8 pins, to allow some
-  // pins used for digital, others analog.  Instead, allow both types
-  // of reporting to be enabled, but check if the pin is configured
-  // as analog when sampling the analog inputs.  Likewise, while
-  // scanning digital pins, portConfigInputs will mask off values from any
-  // pins configured as analog
-}
-
 
 void digitalWriteCallback(byte port, int value)
 {
@@ -240,7 +183,57 @@ void digitalWriteCallback(byte port, int value)
  */
 //void FirmataClass::setAnalogPinReporting(byte pin, byte state) {
 //}
+void reportAnalogCallback(byte analogPin, int value)
+{
+  if (analogPin < TOTAL_ANALOG_PINS) {
+    if(value == 0) {
+      analogInputsToReport = analogInputsToReport &~ (1 << analogPin);
+    } else {
+      analogInputsToReport = analogInputsToReport | (1 << analogPin);
+    }
+  }
+  // TODO: save status to EEPROM here, if changed
+}
 
+void reportDigitalCallback(byte port, int value)
+{
+  if (port < TOTAL_PORTS) {
+    reportPINs[port] = (byte)value;
+  }
+  // do not disable analog reporting on these 8 pins, to allow some
+  // pins used for digital, others analog.  Instead, allow both types
+  // of reporting to be enabled, but check if the pin is configured
+  // as analog when sampling the analog inputs.  Likewise, while
+  // scanning digital pins, portConfigInputs will mask off values from any
+  // pins configured as analog
+}
+
+void initWheels() 
+{
+  wheel_1.setupPins(8,11,9); //setup using pins 12 and 2 for direction control, and 3 for PWM speed control
+  wheel_2.setupPins(12,13,10);//setup using pins 13 and 4 for direction control, and 11 for PWM speed control
+  wheel_1.setDirectionMode(0); //Direction Mode determines how the wheel responds to positive and negative motor power values 
+  wheel_2.setDirectionMode(0);
+  wheel_1.setBrakeMode(0); //Sets the brake mode to zero - freewheeling mode - so wheels are easy to turn by hand
+  wheel_2.setBrakeMode(0); //Sets the brake mode to zero - freewheeling mode - so wheels are easy to turn by hand
+}
+
+void setSpeed( int motor, int speed)
+{
+ if ( motor == WHEEL1 ) {
+   wheel_1.setMotorPower(speed);
+ }
+ if ( motor == WHEEL2 ) {   
+   wheel_2.setMotorPower(speed);  
+ } 
+}
+
+void setup()
+{
+  encodersBegin();  
+  initWheels();
+  firmataSysexBegin();
+}
 
 unsigned long previousSponMillis;    // for comparison with currentMillis
 
@@ -251,29 +244,23 @@ void loop()
   /* DIGITALREAD - as fast as possible, check for changes and output them to the
    * FTDI buffer using Serial.print()  */
   checkDigitalInputs();  
-
-  /* SERIALREAD - processing incoming messagse as soon as possible, while still
-   * checking digital inputs.  */
-  while(Firmata.available())
-    Firmata.processInput();
-    
-    currentMillis = millis();
+  firmataProcessInput();
+  
+   currentMillis = millis();
   if (currentMillis - previousMillis > samplingInterval) {
     previousMillis += samplingInterval;
     /* ANALOGREAD - do all analogReads() at the configured sampling interval */
     for(pin=0; pin<TOTAL_PINS; pin++) {
-      if (1/*IS_PIN_ANALOG(pin) && pinConfig[pin] == ANALOG*/) {
+      if (IS_PIN_ANALOG(pin) && pinConfig[pin] == ANALOG) {
         analogPin = PIN_TO_ANALOG(pin);
-        if (1 /*analogInputsToReport & (1 << analogPin)*/) {
+        if (analogInputsToReport & (1 << analogPin)) {
           Firmata.sendAnalog(analogPin, analogRead(analogPin));
-       }
+        }
       }
     }
-    //for(int i=0; i<6; i++){
-    //   Firmata.sendAnalog(i, analogRead(i));
-    //}
-    
+   
   }
+
   if(spontaneousMsgs) {
     unsigned long currentSponMillis = millis();
     if (currentSponMillis - previousSponMillis > spontaneousMsgInterval) {

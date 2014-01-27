@@ -88,9 +88,15 @@ void firmataSysexBegin()
     mySerial.println("started sysex");
 #endif    
     Firmata.setFirmwareVersion(FIRMATA_MAJOR_VERSION, FIRMATA_MINOR_VERSION);
-    Firmata.begin(57600); 
+    Firmata.begin(57600);
+    Firmata.attach(ANALOG_MESSAGE, analogWriteCallback);
+  Firmata.attach(DIGITAL_MESSAGE, digitalWriteCallback);
+  Firmata.attach(REPORT_ANALOG, reportAnalogCallback);
+  Firmata.attach(REPORT_DIGITAL, reportDigitalCallback);
+  Firmata.attach(SET_PIN_MODE, setPinModeCallback);
     Firmata.attach(START_SYSEX, sysexCallback);
-  //Firmata.attach(SYSTEM_RESET, systemResetCallback); not used in this version 
+  Firmata.attach(SYSTEM_RESET, systemResetCallback); //not used in this version 
+  systemResetCallback();
 }
 
 void firmataProcessInput()
@@ -159,13 +165,32 @@ void sendWheelData( unsigned int pulseWidth, int count)
 
 void sysexCallback(byte command, byte argc, byte *argv)
 {
-  DEBUG_PRINT("Sysex msg cmd "); DEBUG_PRINTln(ENCODER_DATA);
-   
-  
-  unsigned int delayTime; 
-  
   switch(command) {
- 
+  case ENCODER_DATA:
+    if( argv[0] == ENCODER_REQUEST) {
+      encoderDataRequest();
+    }
+    else if(argv[0] == ENABLE_SPONTANEOUS_MSGS){
+      spontaneousMsgs = true;    
+    }
+    else if(argv[0] == DISABLE_SPONTANEOUS_MSGS){
+      spontaneousMsgs = false;
+    }
+    else if(argv[0] == SET_SPONTANEOUS_MSG_INTERVAL) {
+       spontaneousMsgInterval = argv[1];
+       DEBUG_PRINT("interval set to "); DEBUG_PRINTln(spontaneousMsgInterval);
+    }    
+    else if(argv[0] == SET_WHEEL1_SPEED) {
+       int speed = two7bitBytesToSignedInt(argv[1], argv[2]);
+       DEBUG_PRINT("WHEEL1 speed set to "); DEBUG_PRINTln(speed);
+       setSpeed(WHEEL1, speed);
+    }
+    else if(argv[0] == SET_WHEEL2_SPEED) {
+       int speed = two7bitBytesToSignedInt(argv[1], argv[2]);
+       DEBUG_PRINT("WHEEL2 speed set to "); DEBUG_PRINTln(speed);
+       setSpeed(WHEEL2, speed);
+    }  
+  break;
   case SAMPLING_INTERVAL:
     if (argc > 1) {
       samplingInterval = argv[0] + (argv[1] << 7);
@@ -202,14 +227,6 @@ void sysexCallback(byte command, byte argc, byte *argv)
         Firmata.write(PWM);
         Firmata.write(8);
       }
-      if (IS_PIN_SERVO(pin)) {
-        Firmata.write(SERVO);
-        Firmata.write(14);
-      }
-      if (IS_PIN_I2C(pin)) {
-        Firmata.write(I2C);
-        Firmata.write(1);  // to do: determine appropriate value 
-      }
       Firmata.write(127);
     }
     Firmata.write(END_SYSEX);
@@ -237,38 +254,33 @@ void sysexCallback(byte command, byte argc, byte *argv)
     }
     Firmata.write(END_SYSEX);
     break;
-  case ENCODER_DATA:
-  {
-    if( argv[0] == ENCODER_REQUEST) {
-      encoderDataRequest();
-    }
-    else if(argv[0] == ENABLE_SPONTANEOUS_MSGS){
-      spontaneousMsgs = true;    
-    }
-    else if(argv[0] == DISABLE_SPONTANEOUS_MSGS){
-      spontaneousMsgs = false;
-    }
-    else if(argv[0] == SET_SPONTANEOUS_MSG_INTERVAL) {
-       spontaneousMsgInterval = argv[1];
-       DEBUG_PRINT("interval set to "); DEBUG_PRINTln(spontaneousMsgInterval);
-    }    
-    else if(argv[0] == SET_WHEEL1_SPEED) {
-       int speed = two7bitBytesToSignedInt(argv[1], argv[2]);
-       DEBUG_PRINT("WHEEL1 speed set to "); DEBUG_PRINTln(speed);
-       setSpeed(WHEEL1, speed);
-    }
-    else if(argv[0] == SET_WHEEL2_SPEED) {
-       int speed = two7bitBytesToSignedInt(argv[1], argv[2]);
-       DEBUG_PRINT("WHEEL2 speed set to "); DEBUG_PRINTln(speed);
-       setSpeed(WHEEL2, speed);
-    }  
-  }
-  break;
   }
 }
 
+
 void systemResetCallback()
 {
+  
+  
+  for (byte i=0; i < TOTAL_PORTS; i++) {
+    reportPINs[i] = false;      // by default, reporting off
+    portConfigInputs[i] = 0;	// until activated
+    previousPINs[i] = 0;
+  }
+  // pins with analog capability default to analog input
+  // otherwise, pins default to digital output
+  for (byte i=0; i < TOTAL_PINS; i++) {
+    if (IS_PIN_ANALOG(i)) {
+      // turns off pullup, configures everything
+      setPinModeCallback(i, ANALOG);
+    } else {
+      // sets the output to 0, configures portConfigInputs
+      setPinModeCallback(i, OUTPUT);
+    }
+  }
+  // by default, do not report any analog inputs
+  analogInputsToReport = 0;
+  
 #ifdef CONTINUOUS_MSGS  
   continuousMsgs = false; // not used in this version
 #endif  
