@@ -1,6 +1,7 @@
 /*
  * EncoderFirmata sketch with Firmata Sysex additions to support wheel encoders
  * Michael Margolis 2013
+ * Updated 28 Jan to add sysex msgs for ir sensors and switches and firmata pin requests
  *
  * Firmata definitions and support code for new sysex msgs are in the Firmata tab
  * Interrupt handlers and support code for encoders is in QuadEncoder tab
@@ -44,6 +45,11 @@ long spontaneousMsgInterval = 50; // milliseconds between unsolicited messages
 HUBeeBMDWheel wheel_1;
 HUBeeBMDWheel wheel_2;
 
+const int nbrIrSensors                 = 3;
+const int irSensorPins[nbrIrSensors]   = {A1, A2, A3};
+const int irControlPin                 =  14; // A0
+const int nbrSwitches                  = 2;
+const int bumpSwitchPins[nbrSwitches]  = {A4, A5};
 
 void outputPort(byte portNumber, byte portValue, byte forceSend)
 {
@@ -230,9 +236,14 @@ void setSpeed( int motor, int speed)
 
 void setup()
 {
+  firmataSysexBegin();  
   encodersBegin();  
   initWheels();
-  firmataSysexBegin();
+  for(int sw=0; sw < nbrSwitches; sw++) {     
+     pinMode( bumpSwitchPins[sw], INPUT_PULLUP); 
+  }
+  pinMode(irControlPin, OUTPUT);
+  digitalWrite(irControlPin, LOW); // turn off (until needed)
 }
 
 unsigned long previousSponMillis;    // for comparison with currentMillis
@@ -270,3 +281,31 @@ void loop()
   }
 }
 
+void irSensorsGetData(byte argc, int *argv)                      
+{
+  digitalWrite(irControlPin, HIGH);
+  delay(5);
+  int samplesToAverage = 1;  // incease this to average multiple samples  
+  for(int sensor=0; sensor < argc; sensor++) {    
+    if( sensor < nbrIrSensors) {    
+      argv[sensor]=0; 
+      for( int i=0; i < samplesToAverage; i++) {
+        argv[sensor] += analogRead(irSensorPins[sensor]);
+      } 
+      argv[sensor] /= samplesToAverage;
+    }
+    else 
+      argv[sensor] = 0;
+  } 
+  digitalWrite(irControlPin, LOW);
+}
+
+void switchGetData(byte argc, int *argv)
+{
+  for(int sw=0; sw < argc; sw++) {  
+     if( sw < nbrSwitches )  
+       argv[sw] =  digitalRead( bumpSwitchPins[sw]) ? 0: 1; // 0 when not pressed
+     else 
+        argv[sw] = 0;
+  }
+}

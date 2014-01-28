@@ -1,7 +1,8 @@
 /*
- * Sysex additions to support quadrature encoders and motor control
+ * Sysex additions to support Myrtle Robot:
+ *   Quadrature encoders, motor control, IR Sensors and Bump Switches
  *
- * Michael Margolis Dec 2013
+ * Michael Margolis Dec 2013 - Jan 2014
  */
 
 /*
@@ -27,28 +28,65 @@
  See file LICENSE.txt for further information on licensing terms.
  */
 
-/* Encoder data request 
+ /*
+  * MEM - Jan 27 2014 added support for IR sensors and bump switches
+  */
+  
+/* Myrtle requests 
  * ------------------------------
  * 0  START_SYSEX (0xF0)
- * 1  ENCODER_DATA Command (0x7D) // 0x7D looks to be a free sysex tag
- * 2  encoder request tag (1)
+ * 1  MYRTLE_DATA Command (0x7D) // 0x7D looks to be a free sysex tag
+ * 2  encoder request tag indicates the nature of the request
  * 3  END_SYSEX (0xF7)  
  */
 
 /* Encoder data reply 
  * ------------------------------
  * 0  START_SYSEX (0xF0)
- * 1  ENCODER_DATA Command (0x7D) 
+ * 1  MYRTLE_DATA Command (0x7D) 
  * 2  encoder reply tag (1)
- * 3  time_m1 bit  0-6  // duration of most recent encoder pulse for motor 1
- * 4  time_m1 bit  7-13 // each unit is 10 microseconds (value = 0 if motor stopped)
- * 5  count_m1 bit 0-6  // pulse count for motor 1 since last request (0 if first request)
- * 6  count_m1 bit 7-13
- * 7  time_m2 bit  0-6  // duration for motor 2 encoder
- * 8  time_m2 bit  7-13
- * 9  count_m2 bit 0-6  // pulse count for motor 2
- * 10 count_m1 bit 7-13
- * 11 END_SYSEX (0xF7) 
+ * 3  Body length   number of bytes following the tag excluding END_SYSEX    
+ * 4  time_m1 bit  0-6  // duration of most recent encoder pulse for motor 1
+ * 5  time_m1 bit  7-13 // each unit is 10 microseconds (value = 0 if motor stopped)
+ * 6  count_m1 bit 0-6  // pulse count for motor 1 since last request (0 if first request)
+ * 7  count_m1 bit 7-13
+ * 8  time_m2 bit  0-6  // duration for motor 2 encoder
+ * 9  time_m2 bit  7-13
+ * 10 count_m2 bit 0-6  // pulse count for motor 2
+ * 11 count_m1 bit 7-13
+ * 12 END_SYSEX (0xF7) 
+ */
+
+ 
+ /* IRSENSOR_REQUEST data reply 
+ * ------------------------------
+ * 0  START_SYSEX (0xF0)
+ * 1  MYRTLE_DATA Command (0x7D) 
+ * 2  IRSENSOR_REQUEST tag (7)
+ * 3  Body length   number of bytes following the tag excluding END_SYSEX   
+ * 4  sensor1 bit  0-6  // analog read data is in bits 0-9 
+ * 5  sensor1 bit  7-13 
+ * 6  sensor2  bit 0-6 
+ * 7  sensor2  bit 7-13
+ * 8  sensor3  bit  0-6  
+ * 9  sensor3  bit  7-13
+ * 10 sensor4  bit 0-6    // reserved for future use
+ * 11 sensor4  bit 7-13
+ * 12 END_SYSEX (0xF7) 
+ */
+ 
+
+  /* BUMPSWITCH_REQUEST data reply 
+ * ------------------------------
+ * 0  START_SYSEX (0xF0)
+ * 1  MYRTLE_DATA Command (0x7D) 
+ * 2  BUMPSWITCH_REQUEST tag (8)
+ * 3  Body length   number of bytes following the tag excluding END_SYSEX 
+ * 4  left switch  big 0-6  // bit 0 is 1 when switch pressed, else 0
+ * 5  right switch bit 0-6 
+ * 6  reserved    bit 0-6   // reserved for future use
+ * 7  reserved    bit 0-6 
+ * 8 END_SYSEX (0xF7) 
  */
 
 
@@ -66,9 +104,10 @@ SoftwareSerial mySerial(0xff, A0); // RX disabled, TX on A0
 #define DEBUG_PRINTln(x)  
 #endif
 
-const int ENCODER_DATA    =  0x7D;  // encoder command tag
+const int MYRTLE_DATA    =  0x7D; // Myrtle Robot command tag
 const int ENCODER_REQUEST = 1;    // version 1 request format
 const int ENCODER_REPLY   = 1;    // version 1 reply format
+const int ENCODER_BODY_LEN = 8;   // bytes following the tag excluding END_SYSEX   
 
 const int ENABLE_SPONTANEOUS_MSGS      = 2;   
 const int DISABLE_SPONTANEOUS_MSGS     = 3;
@@ -77,9 +116,16 @@ const int SET_SPONTANEOUS_MSG_INTERVAL = 4;
 const int SET_WHEEL1_SPEED             = 5;
 const int SET_WHEEL2_SPEED             = 6;
 
+const int IRSENSOR_REQUEST   = 7;    // analog IR reflectance sensor data
+const int IRSENSOR_BODY_LEN  = 8;    // bytes following the tag excluding END_SYSEX
+
+const int BUMPSWITCH_REQUEST  = 8;   // bump switch states
+const int BUMPSWITCH_BODY_LEN = 4;   // bytes following the tag excluding END_SYSEX
 
 const int PULSE_WIDTH_SCALE = 10; // number of microseconds per unit sent in firmata msg
 
+const int nbrIrSensorFields  = 4; // 3 ir sensors and one reserved field
+const int nbrSwitchFields    = 4; // 2 bump switched and two reserved fields
 
 void firmataSysexBegin()
 {
@@ -90,13 +136,13 @@ void firmataSysexBegin()
     Firmata.setFirmwareVersion(FIRMATA_MAJOR_VERSION, FIRMATA_MINOR_VERSION);
     Firmata.begin(57600);
     Firmata.attach(ANALOG_MESSAGE, analogWriteCallback);
-  Firmata.attach(DIGITAL_MESSAGE, digitalWriteCallback);
-  Firmata.attach(REPORT_ANALOG, reportAnalogCallback);
-  Firmata.attach(REPORT_DIGITAL, reportDigitalCallback);
-  Firmata.attach(SET_PIN_MODE, setPinModeCallback);
+    Firmata.attach(DIGITAL_MESSAGE, digitalWriteCallback);
+    Firmata.attach(REPORT_ANALOG, reportAnalogCallback);
+    Firmata.attach(REPORT_DIGITAL, reportDigitalCallback);
+    Firmata.attach(SET_PIN_MODE, setPinModeCallback);
     Firmata.attach(START_SYSEX, sysexCallback);
-  Firmata.attach(SYSTEM_RESET, systemResetCallback); //not used in this version 
-  systemResetCallback();
+    Firmata.attach(SYSTEM_RESET, systemResetCallback); //not used in this version 
+    systemResetCallback();
 }
 
 void firmataProcessInput()
@@ -112,13 +158,47 @@ void encoderDataRequest()
   unsigned long pulse2;
   long count1;
   long count2;
-  encodersGetData(pulse1, count1, pulse2, count2);  
+  encodersGetData(pulse1, count1, pulse2, count2);    
   Firmata.write(START_SYSEX);
-  Firmata.write(ENCODER_DATA);
+  Firmata.write(MYRTLE_DATA);
   Firmata.write(ENCODER_REPLY);
+  Firmata.write(ENCODER_BODY_LEN); 
   // pulse width is 10 microsecond units
   sendWheelData(pulse1 / PULSE_WIDTH_SCALE, count1 ); 
   sendWheelData(pulse2 / PULSE_WIDTH_SCALE, count2 ); 
+  Firmata.write(END_SYSEX); 
+}
+
+void irSensorsDataRequest()
+{
+
+  int values[nbrIrSensorFields];
+  irSensorsGetData(nbrIrSensorFields, values );  
+  Firmata.write(START_SYSEX);
+  Firmata.write(MYRTLE_DATA);
+  Firmata.write(IRSENSOR_REQUEST);
+  Firmata.write(IRSENSOR_BODY_LEN); 
+  for(int i=0; i < nbrIrSensorFields; i++) {
+    sendValueAsTwo7bitBytes(values[i]);
+  }
+  Firmata.write(END_SYSEX); 
+}
+
+void switchDataRequest()
+{
+
+  int values[nbrSwitchFields];
+  switchGetData(nbrSwitchFields, values);  
+  Firmata.write(START_SYSEX);
+  Firmata.write(MYRTLE_DATA);
+  Firmata.write(BUMPSWITCH_REQUEST);
+  Firmata.write(BUMPSWITCH_BODY_LEN); 
+  for(int i=0; i < nbrSwitchFields; i++) {
+    if(i < nbrSwitches)
+      Firmata.write((byte)(values[i] & 0x7F) );
+    else   
+      Firmata.write((byte)0 );
+  }
   Firmata.write(END_SYSEX); 
 }
 
@@ -166,7 +246,7 @@ void sendWheelData( unsigned int pulseWidth, int count)
 void sysexCallback(byte command, byte argc, byte *argv)
 {
   switch(command) {
-  case ENCODER_DATA:
+  case MYRTLE_DATA:
     if( argv[0] == ENCODER_REQUEST) {
       encoderDataRequest();
     }
@@ -190,6 +270,12 @@ void sysexCallback(byte command, byte argc, byte *argv)
        DEBUG_PRINT("WHEEL2 speed set to "); DEBUG_PRINTln(speed);
        setSpeed(WHEEL2, speed);
     }  
+    else if(argv[0] == IRSENSOR_REQUEST){
+      irSensorsDataRequest();
+    }
+    else if(argv[0] == BUMPSWITCH_REQUEST){
+      switchDataRequest();
+    }
   break;
   case SAMPLING_INTERVAL:
     if (argc > 1) {
@@ -259,9 +345,7 @@ void sysexCallback(byte command, byte argc, byte *argv)
 
 
 void systemResetCallback()
-{
-  
-  
+{  
   for (byte i=0; i < TOTAL_PORTS; i++) {
     reportPINs[i] = false;      // by default, reporting off
     portConfigInputs[i] = 0;	// until activated
