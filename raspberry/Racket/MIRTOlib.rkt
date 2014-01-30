@@ -127,6 +127,8 @@
   ;; Open Firmata port and stop motors
   (open-firmata portname os)
   (stopMotors)
+  (motor1-reset-count)
+  (motor2-reset-count)
 
   ;; Setting the PINs for bump switches
   (set-pin-mode! 18 INPUT_MODE)
