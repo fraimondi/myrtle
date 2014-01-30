@@ -248,38 +248,51 @@ void setup()
 
 unsigned long previousSponMillis;    // for comparison with currentMillis
 
+boolean isMyrtlePinAnalog(int pin)
+{
+  for(int i=0; i < nbrIrSensors; i++) {
+     if( pin == irSensorPins[i])
+       return true;
+  }
+  return false;
+}
+
+#define MYRTLE_FIRMATA // define this to select only myrtle ir sensor pins for analog output
 void loop()
 {
    byte pin, analogPin;
 
   /* DIGITALREAD - as fast as possible, check for changes and output them to the
    * FTDI buffer using Serial.print()  */
-  checkDigitalInputs();  
+  checkDigitalInputs();
   firmataProcessInput();
-  
+
    currentMillis = millis();
   if (currentMillis - previousMillis > samplingInterval) {
     previousMillis += samplingInterval;
-    /* ANALOGREAD - do all analogReads() at the configured sampling interval */
+ /* ANALOGREAD - do all analogReads() at the configured sampling interval */
     for(pin=0; pin<TOTAL_PINS; pin++) {
+#ifdef MYRTLE_FIRMATA
+      if ( isMyrtlePinAnalog(pin)) {
+        analogPin = PIN_TO_ANALOG(pin);
+        Firmata.sendAnalog(analogPin, analogRead(analogPin));
+      }
+#else // this is the standard fermata code
       if (IS_PIN_ANALOG(pin) && pinConfig[pin] == ANALOG) {
         analogPin = PIN_TO_ANALOG(pin);
         if (analogInputsToReport & (1 << analogPin)) {
           Firmata.sendAnalog(analogPin, analogRead(analogPin));
         }
       }
+#endif
     }
-   
-  }
-
-  if(spontaneousMsgs) {
-    unsigned long currentSponMillis = millis();
-    if (currentSponMillis - previousSponMillis > spontaneousMsgInterval) {
-      previousSponMillis += spontaneousMsgInterval;
+    if(spontaneousMsgs) {
       encoderDataRequest();
+
     }
   }
 }
+
 
 void irSensorsGetData(byte argc, int *argv)                      
 {

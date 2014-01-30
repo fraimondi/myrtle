@@ -17,6 +17,7 @@
 ;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; CHANGELOG
+;; 140128 Franco - New tests for Myrtle
 ;; 131125 Franco - Negative values cause problems. I'm now trying to use positive 
 ;;                 values only for pwr
 ;; 131122 Franco - Work started
@@ -37,8 +38,23 @@
 
 
 ;; We talk to the Arduino using Firmata. 
-(require "firmata.rkt")
+(require "../../../../tex/teaching/13/CSD1000/sw/racket-firmata/firmata.rkt")
 
+(provide w1-stopMotor
+         w2-stopMotor
+         stopMotors
+         setMotor
+         setMotors
+         setup
+         shutdown
+         enableIR
+         rightBump?
+         leftBump?
+         getIR
+         getCount
+)
+         
+         
 (define (w1-stopMotor)
   (send-sysex-int-msg #x7D 5 0)
 )
@@ -69,54 +85,66 @@
   (setMotor 1 speed2)
   )
 
+;; IR sensors are attached to analog PINS 1,2,3 
+;; but they need to be activated by setting PIN 14 to high
+(define (enableIR)
+  (set-pin-mode! 14 INPUT_MODE)
+  (set-arduino-pin! 14)
+  (report-analog-pin! 1 1)
+  (report-analog-pin! 2 1)
+  (report-analog-pin! 3 1)
+)
 
+
+;; Two Boolean functions to see if the bump is pressed
+(define (leftBump?)
+  (not (is-arduino-pin-set? 18))
+  )
+
+(define (rightBump?)
+  (not (is-arduino-pin-set? 19))
+  )
+
+;; just to retrieve the analog reading of an IR sensor
+;; I assume num = analog pin number
+;; FIXME: implement error checking here
+(define (getIR num)
+  (read-analog-pin num)
+)
+
+;; Retrieve the count of the encoder for one motor
+;; FIXME: check that num \in {1,2}
+(define (getCount num)
+  (cond ( (= num 1) 
+          (motor1-read-count))
+        ( (= num 2)
+          (motor2-read-count)))
+  )
 ;; A function to setup the connection.
 ;; You need to provide the port name, something like "/dev/ttyACM0" on linux
-;; or "COM3" on Windows.
-(define (setup portname)
-  (open-firmata portname "mac")
+;; or "COM3" on Windows, and then the operating system (win, mac or linux, as a string)
+(define (setup portname os)
+  ;; Open Firmata port and stop motors
+  (open-firmata portname os)
   (stopMotors)
+
+  ;; Setting the PINs for bump switches
+  (set-pin-mode! 18 INPUT_MODE)
+  (set-pin-mode! 19 INPUT_MODE)
   
+  ;; Enable reporting for various ports
+  (report-digital-port! 0 1)
+  (report-digital-port! 1 1)
+  (report-digital-port! 2 1)
+  (report-digital-port! 3 1)
+  
+  ;; Enable continuous reporting
+  (send-sysex-msg #x7D 2)
+  
+  ) ;; end of setup
+
+(define (shutdown)
+  (stopMotors)
+  (sleep 0.1)
+  (close-firmata)
   )
-
-
-(define (left)
-   (setMotors 80 -80)
-   (sleep 0.5)
-   (stopMotors)
-)
-
-(define (right)
-   (setMotors -80 80)
-   (sleep 0.5)
-   (stopMotors)
-)
-
-(define (front)
-   (setMotors 80 80)
-   (sleep 0.5)
-   (stopMotors)
-)
-
-(define (back)
-   (setMotors -80 -80)
-   (sleep 0.5)
-   (stopMotors)
-)
-
-(define (test)
-  (setup "/dev/tty.usbmodem1421")
-  (front)
-  (sleep 1)
-;;  (send-sysex-msg #x7D 1)
-  (back)
-  (sleep 1)
-;;  (send-sysex-msg #x7D 1)
-  (left)
-  (sleep 1)
-;;  (send-sysex-msg #x7D 1)
-  (right)
-;;  (send-sysex-msg #x7D 1)
-  )
-
-

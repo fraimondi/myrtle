@@ -354,7 +354,7 @@ void systemResetCallback()
   // pins with analog capability default to analog input
   // otherwise, pins default to digital output
   for (byte i=0; i < TOTAL_PINS; i++) {
-    if (IS_PIN_ANALOG(i)) {
+    if (isMyrtlePinAnalog(i)) {
       // turns off pullup, configures everything
       setPinModeCallback(i, ANALOG);
     } else {
