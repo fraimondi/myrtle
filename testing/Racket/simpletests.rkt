@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../../raspberry/Racket/MIRTOlib.rkt")
+(require "MIRTOlib.rkt")
 
 ;; ---------------------------------------------------------
 ;; Simple testing functions for Myrtle Robot
