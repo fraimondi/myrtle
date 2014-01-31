@@ -17,7 +17,7 @@
 ;;    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;; CHANGELOG
-;; 140128 Franco - New tests for Myrtle
+;; 140128 Franco - New tests for Myrtle (removed from the teaching version)
 ;; 131125 Franco - Negative values cause problems. I'm now trying to use positive 
 ;;                 values only for pwr
 ;; 131122 Franco - Work started
@@ -38,7 +38,7 @@
 
 
 ;; We talk to the Arduino using Firmata. 
-(require "firmata.rkt")
+(require "../../../../tex/teaching/13/CSD1000/sw/racket-firmata/firmata.rkt")
 
 (provide w1-stopMotor
          w2-stopMotor
@@ -48,10 +48,12 @@
          setup
          shutdown
          enableIR
+         disableIR
          rightBump?
          leftBump?
          getIR
          getCount
+         resetCount
 )
          
          
@@ -95,6 +97,10 @@
   (report-analog-pin! 3 1)
 )
 
+(define (disableIR)
+  (set-pin-mode! 14 OUTPUT_MODE)
+  (clear-arduino-pin! 14)
+)
 
 ;; Two Boolean functions to see if the bump is pressed
 (define (leftBump?)
@@ -120,12 +126,22 @@
         ( (= num 2)
           (motor2-read-count)))
   )
+
+;; Reset the count of the encoder for one motor
+;; FIXME: check that num \in {1,2}
+(define (resetCount num)
+  (cond ( (= num 1) 
+          (motor1-reset-count))
+        ( (= num 2)
+          (motor2-reset-count)))
+  )
+
 ;; A function to setup the connection.
-;; You need to provide the port name, something like "/dev/ttyACM0" on linux
-;; or "COM3" on Windows, and then the operating system (win, mac or linux, as a string)
-(define (setup portname os)
+;; This uses the new firmata version that should be able to
+;; recognise the platform automagically.
+(define (setup)
   ;; Open Firmata port and stop motors
-  (open-firmata portname os)
+  (open-firmata)
   (stopMotors)
   (motor1-reset-count)
   (motor2-reset-count)
