@@ -38,7 +38,7 @@
 
 
 ;; We talk to the Arduino using Firmata. 
-(require "../../../../tex/teaching/13/CSD1000/sw/racket-firmata/firmata.rkt")
+(require "firmata.rkt")
 
 (provide w1-stopMotor
          w2-stopMotor
