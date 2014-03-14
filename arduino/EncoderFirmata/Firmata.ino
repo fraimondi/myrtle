@@ -92,6 +92,7 @@
 
 #include <Firmata.h>
 
+
 //#define SOFT_SERIAL_DEBUG // uncomment for debug printing 
 #ifdef SOFT_SERIAL_DEBUG
 #define DEBUG_PRINT(x)  mySerial.print(x)
@@ -159,14 +160,14 @@ void encoderDataRequest()
   long count1;
   long count2;
   encodersGetData(pulse1, count1, pulse2, count2);    
-  Firmata.write(START_SYSEX);
-  Firmata.write(MYRTLE_DATA);
-  Firmata.write(ENCODER_REPLY);
-  Firmata.write(ENCODER_BODY_LEN); 
+  Serial.write(START_SYSEX);
+  Serial.write(MYRTLE_DATA);
+  Serial.write(ENCODER_REPLY);
+  Serial.write(ENCODER_BODY_LEN); 
   // pulse width is 10 microsecond units
   sendWheelData(pulse1 / PULSE_WIDTH_SCALE, count1 ); 
   sendWheelData(pulse2 / PULSE_WIDTH_SCALE, count2 ); 
-  Firmata.write(END_SYSEX); 
+  Serial.write(END_SYSEX); 
 }
 
 void irSensorsDataRequest()
@@ -174,14 +175,14 @@ void irSensorsDataRequest()
 
   int values[nbrIrSensorFields];
   irSensorsGetData(nbrIrSensorFields, values );  
-  Firmata.write(START_SYSEX);
-  Firmata.write(MYRTLE_DATA);
-  Firmata.write(IRSENSOR_REQUEST);
-  Firmata.write(IRSENSOR_BODY_LEN); 
+  Serial.write(START_SYSEX);
+  Serial.write(MYRTLE_DATA);
+  Serial.write(IRSENSOR_REQUEST);
+  Serial.write(IRSENSOR_BODY_LEN); 
   for(int i=0; i < nbrIrSensorFields; i++) {
     sendValueAsTwo7bitBytes(values[i]);
   }
-  Firmata.write(END_SYSEX); 
+  Serial.write(END_SYSEX); 
 }
 
 void switchDataRequest()
@@ -189,23 +190,23 @@ void switchDataRequest()
 
   int values[nbrSwitchFields];
   switchGetData(nbrSwitchFields, values);  
-  Firmata.write(START_SYSEX);
-  Firmata.write(MYRTLE_DATA);
-  Firmata.write(BUMPSWITCH_REQUEST);
-  Firmata.write(BUMPSWITCH_BODY_LEN); 
+  Serial.write(START_SYSEX);
+  Serial.write(MYRTLE_DATA);
+  Serial.write(BUMPSWITCH_REQUEST);
+  Serial.write(BUMPSWITCH_BODY_LEN); 
   for(int i=0; i < nbrSwitchFields; i++) {
     if(i < nbrSwitches)
-      Firmata.write((byte)(values[i] & 0x7F) );
+      Serial.write((byte)(values[i] & 0x7F) );
     else   
-      Firmata.write((byte)0 );
+      Serial.write((byte)0 );
   }
-  Firmata.write(END_SYSEX); 
+  Serial.write(END_SYSEX); 
 }
 
 void  sendValueAsTwo7bitBytes(int value)
 {
-  Firmata.write((byte)(value & 0x7F) );
-  Firmata.write((byte)(value >> 7) & 0x7F);  
+  Serial.write((byte)(value & 0x7F) );
+  Serial.write((byte)(value >> 7) & 0x7F);  
 }
 
 void  sendSignedValueAsTwo7bitBytes(int value)
@@ -257,8 +258,9 @@ void sysexCallback(byte command, byte argc, byte *argv)
       spontaneousMsgs = false;
     }
     else if(argv[0] == SET_SPONTANEOUS_MSG_INTERVAL) {
-       spontaneousMsgInterval = argv[1];
-       DEBUG_PRINT("interval set to "); DEBUG_PRINTln(spontaneousMsgInterval);
+       //spontaneousMsgInterval = argv[1];
+       samplingInterval = argv[1];
+       DEBUG_PRINT("interval set to "); DEBUG_PRINTln(samplingInterval);
     }    
     else if(argv[0] == SET_WHEEL1_SPEED) {
        int speed = two7bitBytesToSignedInt(argv[1], argv[2]);
@@ -276,7 +278,22 @@ void sysexCallback(byte command, byte argc, byte *argv)
     else if(argv[0] == BUMPSWITCH_REQUEST){
       switchDataRequest();
     }
-  break;
+    break;
+  case SERVO_CONFIG:
+    if(argc > 4) {
+      // these vars are here for clarity, they'll optimized away by the compiler
+      byte pin = argv[0];
+      int minPulse = argv[1] + (argv[2] << 7);
+      int maxPulse = argv[3] + (argv[4] << 7);
+
+      if (IS_PIN_SERVO(pin)) {
+        if (servos[PIN_TO_SERVO(pin)].attached())
+          servos[PIN_TO_SERVO(pin)].detach();
+        servos[PIN_TO_SERVO(pin)].attach(PIN_TO_DIGITAL(pin), minPulse, maxPulse);
+        setPinModeCallback(pin, SERVO);
+      }
+    }
+    break;
   case SAMPLING_INTERVAL:
     if (argc > 1) {
       samplingInterval = argv[0] + (argv[1] << 7);
@@ -296,49 +313,49 @@ void sysexCallback(byte command, byte argc, byte *argv)
     }
     break;
   case CAPABILITY_QUERY:
-    Firmata.write(START_SYSEX);
-    Firmata.write(CAPABILITY_RESPONSE);
+    Serial.write(START_SYSEX);
+    Serial.write(CAPABILITY_RESPONSE);
     for (byte pin=0; pin < TOTAL_PINS; pin++) {
       if (IS_PIN_DIGITAL(pin)) {
-        Firmata.write((byte)INPUT);
-        Firmata.write(1);
-        Firmata.write((byte)OUTPUT);
-        Firmata.write(1);
+        Serial.write((byte)INPUT);
+        Serial.write(1);
+        Serial.write((byte)OUTPUT);
+        Serial.write(1);
       }
       if (IS_PIN_ANALOG(pin)) {
-        Firmata.write(ANALOG);
-        Firmata.write(10);
+        Serial.write(ANALOG);
+        Serial.write(10);
       }
       if (IS_PIN_PWM(pin)) {
-        Firmata.write(PWM);
-        Firmata.write(8);
+        Serial.write(PWM);
+        Serial.write(8);
       }
-      Firmata.write(127);
+      Serial.write(127);
     }
-    Firmata.write(END_SYSEX);
+    Serial.write(END_SYSEX);
     break;
   case PIN_STATE_QUERY:
     if (argc > 0) {
       byte pin=argv[0];
-      Firmata.write(START_SYSEX);
-      Firmata.write(PIN_STATE_RESPONSE);
-      Firmata.write(pin);
+      Serial.write(START_SYSEX);
+      Serial.write(PIN_STATE_RESPONSE);
+      Serial.write(pin);
       if (pin < TOTAL_PINS) {
-        Firmata.write((byte)pinConfig[pin]);
-	Firmata.write((byte)pinState[pin] & 0x7F);
-	if (pinState[pin] & 0xFF80) Firmata.write((byte)(pinState[pin] >> 7) & 0x7F);
-	if (pinState[pin] & 0xC000) Firmata.write((byte)(pinState[pin] >> 14) & 0x7F);
+        Serial.write((byte)pinConfig[pin]);
+	Serial.write((byte)pinState[pin] & 0x7F);
+	if (pinState[pin] & 0xFF80) Serial.write((byte)(pinState[pin] >> 7) & 0x7F);
+	if (pinState[pin] & 0xC000) Serial.write((byte)(pinState[pin] >> 14) & 0x7F);
       }
-      Firmata.write(END_SYSEX);
+      Serial.write(END_SYSEX);
     }
     break;
   case ANALOG_MAPPING_QUERY:
-    Firmata.write(START_SYSEX);
-    Firmata.write(ANALOG_MAPPING_RESPONSE);
+    Serial.write(START_SYSEX);
+    Serial.write(ANALOG_MAPPING_RESPONSE);
     for (byte pin=0; pin < TOTAL_PINS; pin++) {
-      Firmata.write(IS_PIN_ANALOG(pin) ? PIN_TO_ANALOG(pin) : 127);
+      Serial.write(IS_PIN_ANALOG(pin) ? PIN_TO_ANALOG(pin) : 127);
     }
-    Firmata.write(END_SYSEX);
+    Serial.write(END_SYSEX);
     break;
   }
 }
@@ -354,7 +371,7 @@ void systemResetCallback()
   // pins with analog capability default to analog input
   // otherwise, pins default to digital output
   for (byte i=0; i < TOTAL_PINS; i++) {
-    if (isMyrtlePinAnalog(i)) {
+    if (IS_PIN_ANALOG(i)) {
       // turns off pullup, configures everything
       setPinModeCallback(i, ANALOG);
     } else {
