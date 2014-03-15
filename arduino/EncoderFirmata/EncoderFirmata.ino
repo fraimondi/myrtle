@@ -3,6 +3,7 @@
  * Michael Margolis 2013
  * Updated 28 Jan to add sysex msgs for ir sensors and switches and firmata pin requests
  * Updated 10 March  to support servos
+ * Updated 15 March (Franco) to support Ping function for ultrasonic sensor
  *
  * Firmata definitions and support code for new sysex msgs are in the Firmata tab
  * Interrupt handlers and support code for encoders is in QuadEncoder tab
@@ -10,6 +11,7 @@
  */
 
 #include "HUBeeWheel.h"
+#include "NewPing2.h"
 #include <Servo.h>
 #include <Firmata.h>
 
@@ -18,6 +20,8 @@
 #define MINIMUM_SAMPLING_INTERVAL 10
 
 #define REGISTER_NOT_SPECIFIED -1
+
+#define MAX_DISTANCE 100 // max distance for sonar below
 
 /* analog inputs */
 int analogInputsToReport = 0; // bitwise array to store pin reporting
@@ -52,8 +56,11 @@ const int irSensorPins[nbrIrSensors]   = {A1, A2, A3};
 const int irControlPin                 =  14; // A0
 const int nbrSwitches                  = 2;
 const int bumpSwitchPins[nbrSwitches]  = {A4, A5};
+const int distancePin                  = 5;
 
 Servo servos[MAX_SERVOS];
+
+NewPing sonar(distancePin,distancePin,MAX_DISTANCE);
 
 void outputPort(byte portNumber, byte portValue, byte forceSend)
 {

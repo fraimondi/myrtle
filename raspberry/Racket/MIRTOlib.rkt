@@ -54,6 +54,8 @@
          getIR
          getCount
          resetCount
+         requestDistance
+         getDistance
 )
          
          
@@ -160,6 +162,14 @@
   (send-sysex-msg #x7D 2)
   
   ) ;; end of setup
+
+;; Request to make a measure using sonar distance
+(define (requestDistance)
+  (send-sysex-msg #x7D 9)
+)
+
+;; Calls the equivalent function in Firmata
+(define (getDistance) (getSonarDistance))
 
 (define (shutdown)
   (stopMotors)
