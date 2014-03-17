@@ -3,7 +3,7 @@
  * Michael Margolis 2013
  * Updated 28 Jan to add sysex msgs for ir sensors and switches and firmata pin requests
  * Updated 10 March  to support servos
- * Updated 15 March (Franco) to support Ping function for ultrasonic sensor
+ * Updated 16 March to support HC-SR04 ultrasonic distance sensor
  *
  * Firmata definitions and support code for new sysex msgs are in the Firmata tab
  * Interrupt handlers and support code for encoders is in QuadEncoder tab
@@ -11,7 +11,6 @@
  */
 
 #include "HUBeeWheel.h"
-#include "NewPing2.h"
 #include <Servo.h>
 #include <Firmata.h>
 
@@ -20,8 +19,6 @@
 #define MINIMUM_SAMPLING_INTERVAL 10
 
 #define REGISTER_NOT_SPECIFIED -1
-
-#define MAX_DISTANCE 100 // max distance for sonar below
 
 /* analog inputs */
 int analogInputsToReport = 0; // bitwise array to store pin reporting
@@ -56,11 +53,9 @@ const int irSensorPins[nbrIrSensors]   = {A1, A2, A3};
 const int irControlPin                 =  14; // A0
 const int nbrSwitches                  = 2;
 const int bumpSwitchPins[nbrSwitches]  = {A4, A5};
-const int distancePin                  = 5;
+const int pingSensorPin                = 5; // trig and echo pins connected together (TODO - change if using different Arduino pin)
 
 Servo servos[MAX_SERVOS];
-
-NewPing sonar(distancePin,distancePin,MAX_DISTANCE);
 
 void outputPort(byte portNumber, byte portValue, byte forceSend)
 {
@@ -305,7 +300,7 @@ void loop()
     if (spontaneousMsgs) {
       encoderDataRequest();
     }
-  }
+  }  
 }
 
 void irSensorsGetData(byte argc, int *argv)
@@ -335,4 +330,32 @@ void switchGetData(byte argc, int *argv)
     else
       argv[sw] = 0;
   }
+}
+
+int distanceSensorGetData()
+{
+const long MAX_DISTANCE = 100;  
+const long MAX_DURATION =   (MAX_DISTANCE * 58);
+
+  // The sensor is triggered by a HIGH pulse of 2 or more microseconds.
+  // Give a short LOW pulse beforehand to ensure a clean HIGH pulse:
+  pinMode(pingSensorPin, OUTPUT);
+  digitalWrite(pingSensorPin, LOW);
+  delayMicroseconds(4);
+  digitalWrite(pingSensorPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(pingSensorPin, LOW);
+
+  pinMode(pingSensorPin, INPUT); 
+  
+  // limit pulseIn duration to a max of 275cm (just under 16ms) 
+  // if pulse does not arrive in this time then ping sensor may not be connected
+  // if you need to increase this then you must change the distanceSensorDataRequest message body size
+  long duration = pulseIn(pingSensorPin, HIGH, MAX_DURATION); 
+  // convert the time into a distance
+  // The speed of sound is 340 m/s or 29 microseconds per centimeter.
+  // The ping travels out and back, so to find the distance of the
+  // object we take half of the distance travelled.
+  int cm = (duration / 29) / 2;
+  return cm;  
 }

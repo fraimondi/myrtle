@@ -28,10 +28,10 @@
  See file LICENSE.txt for further information on licensing terms.
  */
 
-/*
+ /*
   * MEM - Jan 27 2014 added support for IR sensors and bump switches
- */
-
+  */
+  
 /* Myrtle requests 
  * ------------------------------
  * 0  START_SYSEX (0xF0)
@@ -57,8 +57,8 @@
  * 12 END_SYSEX (0xF7) 
  */
 
-
-/* IRSENSOR_REQUEST data reply 
+ 
+ /* IRSENSOR_REQUEST data reply 
  * ------------------------------
  * 0  START_SYSEX (0xF0)
  * 1  MYRTLE_DATA Command (0x7D) 
@@ -74,9 +74,9 @@
  * 11 sensor4  bit 7-13
  * 12 END_SYSEX (0xF7) 
  */
+ 
 
-
-/* BUMPSWITCH_REQUEST data reply 
+  /* BUMPSWITCH_REQUEST data reply 
  * ------------------------------
  * 0  START_SYSEX (0xF0)
  * 1  MYRTLE_DATA Command (0x7D) 
@@ -89,19 +89,14 @@
  * 8 END_SYSEX (0xF7) 
  */
 
-
-/* DISTANCESENSOR_REQUEST data reply 
+  /* DISTANCE_REQUEST data reply 
  * ------------------------------
  * 0  START_SYSEX (0xF0)
  * 1  MYRTLE_DATA Command (0x7D) 
- * 2  DISTANCESENSOR_REQUEST tag (9)
- * 3  Body length   number of bytes following the tag excluding END_SYSEX   
- * 4  distance  bit  0-6  // distance in mm 
- * 5  distance  bit  7-13 
- * 6  time      bit 0-6 // timestamp (TBD)
- * 7  time      bit 7-13
- * 8  reserved  bit 0-6 // reserved for future use
- * 9  reserved  bit 7-13
+ * 2  DISTANCE_REQUEST tag (9)
+ * 3  Body length   number of bytes following the tag excluding END_SYSEX 
+ * 4  distance bits  0-6  // distance in cm
+ * 5  distance bits  7-13 // max distance is 275cm
  * 8 END_SYSEX (0xF7) 
  */
 
@@ -138,31 +133,32 @@ const int IRSENSOR_BODY_LEN  = 8;    // bytes following the tag excluding END_SY
 const int BUMPSWITCH_REQUEST  = 8;   // bump switch states
 const int BUMPSWITCH_BODY_LEN = 4;   // bytes following the tag excluding END_SYSEX
 
-const int DISTANCESENSOR_REQUEST = 9; // request for distance
-const int DISTANCESENSOR_BODY_LEN = 6; // bytes following the tag excluding END_SYSEX
+const int DISTANCE_REQUEST    = 9;   // distance in cm (range 0-275)
+const int DISTANCE_BODY_LEN   = 2;   // bytes following the tag excluding END_SYSEX
+
+/**** end of message tag enumerations ****/
 
 const int PULSE_WIDTH_SCALE = 10; // number of microseconds per unit sent in firmata msg
 
 const int nbrIrSensorFields  = 4; // 3 ir sensors and one reserved field
 const int nbrSwitchFields    = 4; // 2 bump switched and two reserved fields
-const int nbrDistanceSensorFields = 3; // distance, time and a reserved field 
 
 void firmataSysexBegin()
 {
 #ifdef SOFT_SERIAL_DEBUG  
-  mySerial.begin(57600);
-  mySerial.println("started sysex");
+    mySerial.begin(57600);
+    mySerial.println("started sysex");
 #endif    
-  Firmata.setFirmwareVersion(FIRMATA_MAJOR_VERSION, FIRMATA_MINOR_VERSION);
-  Firmata.begin(57600);
-  Firmata.attach(ANALOG_MESSAGE, analogWriteCallback);
-  Firmata.attach(DIGITAL_MESSAGE, digitalWriteCallback);
-  Firmata.attach(REPORT_ANALOG, reportAnalogCallback);
-  Firmata.attach(REPORT_DIGITAL, reportDigitalCallback);
-  Firmata.attach(SET_PIN_MODE, setPinModeCallback);
-  Firmata.attach(START_SYSEX, sysexCallback);
-  Firmata.attach(SYSTEM_RESET, systemResetCallback); //not used in this version 
-  systemResetCallback();
+    Firmata.setFirmwareVersion(FIRMATA_MAJOR_VERSION, FIRMATA_MINOR_VERSION);
+    Firmata.begin(57600);
+    Firmata.attach(ANALOG_MESSAGE, analogWriteCallback);
+    Firmata.attach(DIGITAL_MESSAGE, digitalWriteCallback);
+    Firmata.attach(REPORT_ANALOG, reportAnalogCallback);
+    Firmata.attach(REPORT_DIGITAL, reportDigitalCallback);
+    Firmata.attach(SET_PIN_MODE, setPinModeCallback);
+    Firmata.attach(START_SYSEX, sysexCallback);
+    Firmata.attach(SYSTEM_RESET, systemResetCallback); //not used in this version 
+    systemResetCallback();
 }
 
 void firmataProcessInput()
@@ -222,27 +218,19 @@ void switchDataRequest()
   Serial.write(END_SYSEX); 
 }
 
-
 void distanceSensorDataRequest()
 {
-  sonar.ping_timer(sendDistanceResponse);
-}
 
-void sendDistanceResponse() {
-  if (sonar.check_timer()) {
-    int values[nbrDistanceSensorFields];
-    Serial.write(START_SYSEX);
-    Serial.write(MYRTLE_DATA);
-    Serial.write(DISTANCESENSOR_REQUEST);
-    Serial.write(DISTANCESENSOR_BODY_LEN); 
-    sendValueAsTwo7bitBytes((int)(sonar.ping_result / US_ROUNDTRIP_CM)*10);
-    Serial.write((byte)0); // FIXME: add time
-    Serial.write((byte)0); // Reserved field
-    Serial.write(END_SYSEX); 
-  }
-  // FIXME!!! there is a problem with distance > bound. need to debug a bit
+  int value = distanceSensorGetData();  
+  Serial.write(START_SYSEX);
+  Serial.write(MYRTLE_DATA);
+  Serial.write(DISTANCE_REQUEST);
+  Serial.write(DISTANCE_BODY_LEN); 
+  sendValueAsTwo7bitBytes(value);
+  Serial.write(END_SYSEX); 
+  DEBUG_PRINTln(value);  
 }
-
+  
 void  sendValueAsTwo7bitBytes(int value)
 {
   Serial.write((byte)(value & 0x7F) );
@@ -252,13 +240,13 @@ void  sendValueAsTwo7bitBytes(int value)
 void  sendSignedValueAsTwo7bitBytes(int value)
 {
   int signBit = 0x0; 
-
+  
   if( value < 0) {
-    value = - value; 
-    signBit = 0x2000; // msb high if negative number
+     value = - value; 
+     signBit = 0x2000; // msb high if negative number
   }
   if(value > 0x1fff)
-    value = 0x1fff; // truncate to 13 bits
+        value = 0x1fff; // truncate to 13 bits
   value |= signBit;
   sendValueAsTwo7bitBytes(value);
 }
@@ -273,7 +261,7 @@ int  two7bitBytesToSignedInt(byte b1, byte b2)
 {
   int value = b1 + (((int)b2)<< 7);
   if (value >= 0x2000){
-    value = -(value & 0x1fff); // remove sign bit and negate val
+     value = -(value & 0x1fff); // remove sign bit and negate val
   }
   return value;
 }
@@ -298,22 +286,19 @@ void sysexCallback(byte command, byte argc, byte *argv)
       spontaneousMsgs = false;
     }
     else if(argv[0] == SET_SPONTANEOUS_MSG_INTERVAL) {
-      //spontaneousMsgInterval = argv[1];
-      samplingInterval = argv[1];
-      DEBUG_PRINT("interval set to "); 
-      DEBUG_PRINTln(samplingInterval);
+       //spontaneousMsgInterval = argv[1];
+       samplingInterval = argv[1];
+       DEBUG_PRINT("interval set to "); DEBUG_PRINTln(samplingInterval);
     }    
     else if(argv[0] == SET_WHEEL1_SPEED) {
-      int speed = two7bitBytesToSignedInt(argv[1], argv[2]);
-      DEBUG_PRINT("WHEEL1 speed set to "); 
-      DEBUG_PRINTln(speed);
-      setSpeed(WHEEL1, speed);
+       int speed = two7bitBytesToSignedInt(argv[1], argv[2]);
+       DEBUG_PRINT("WHEEL1 speed set to "); DEBUG_PRINTln(speed);
+       setSpeed(WHEEL1, speed);
     }
     else if(argv[0] == SET_WHEEL2_SPEED) {
-      int speed = two7bitBytesToSignedInt(argv[1], argv[2]);
-      DEBUG_PRINT("WHEEL2 speed set to "); 
-      DEBUG_PRINTln(speed);
-      setSpeed(WHEEL2, speed);
+       int speed = two7bitBytesToSignedInt(argv[1], argv[2]);
+       DEBUG_PRINT("WHEEL2 speed set to "); DEBUG_PRINTln(speed);
+       setSpeed(WHEEL2, speed);
     }  
     else if(argv[0] == IRSENSOR_REQUEST){
       irSensorsDataRequest();
@@ -321,9 +306,10 @@ void sysexCallback(byte command, byte argc, byte *argv)
     else if(argv[0] == BUMPSWITCH_REQUEST){
       switchDataRequest();
     }
-    else if(argv[0] == DISTANCESENSOR_REQUEST){
-      distanceSensorDataRequest();
+    else if(argv[0] == DISTANCE_REQUEST){ 
+       distanceSensorDataRequest();
     }
+   
     break;
   case SERVO_CONFIG:
     if(argc > 4) {
@@ -346,8 +332,7 @@ void sysexCallback(byte command, byte argc, byte *argv)
       if (samplingInterval < MINIMUM_SAMPLING_INTERVAL) {
         samplingInterval = MINIMUM_SAMPLING_INTERVAL;
       }      
-    } 
-    else {
+    } else {
       //Firmata.sendString("Not enough data");
     }
     break;
@@ -389,9 +374,9 @@ void sysexCallback(byte command, byte argc, byte *argv)
       Serial.write(pin);
       if (pin < TOTAL_PINS) {
         Serial.write((byte)pinConfig[pin]);
-        Serial.write((byte)pinState[pin] & 0x7F);
-        if (pinState[pin] & 0xFF80) Serial.write((byte)(pinState[pin] >> 7) & 0x7F);
-        if (pinState[pin] & 0xC000) Serial.write((byte)(pinState[pin] >> 14) & 0x7F);
+	Serial.write((byte)pinState[pin] & 0x7F);
+	if (pinState[pin] & 0xFF80) Serial.write((byte)(pinState[pin] >> 7) & 0x7F);
+	if (pinState[pin] & 0xC000) Serial.write((byte)(pinState[pin] >> 14) & 0x7F);
       }
       Serial.write(END_SYSEX);
     }
@@ -421,18 +406,16 @@ void systemResetCallback()
     if (IS_PIN_ANALOG(i)) {
       // turns off pullup, configures everything
       setPinModeCallback(i, ANALOG);
-    } 
-    else {
+    } else {
       // sets the output to 0, configures portConfigInputs
       setPinModeCallback(i, OUTPUT);
     }
   }
   // by default, do not report any analog inputs
   analogInputsToReport = 0;
-
+  
 #ifdef CONTINUOUS_MSGS  
   continuousMsgs = false; // not used in this version
 #endif  
 }
-
 
