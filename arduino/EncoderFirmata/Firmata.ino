@@ -99,6 +99,17 @@
  * 5  distance bits  7-13 // max distance is 275cm
  * 8 END_SYSEX (0xF7) 
  */
+ 
+   /* DISTANCE_REQUEST2 data reply 
+ * ------------------------------
+ * 0  START_SYSEX (0xF0)
+ * 1  MYRTLE_DATA Command (0x7D) 
+ * 2  DISTANCE_REQUEST tag (9)
+ * 3  Body length   number of bytes following the tag excluding END_SYSEX 
+ * 4  distance bits  0-6  // distance in cm
+ * 5  distance bits  7-13 // max distance is 275cm
+ * 8 END_SYSEX (0xF7) 
+ */
 
 #include <Firmata.h>
 
@@ -134,6 +145,7 @@ const int BUMPSWITCH_REQUEST  = 8;   // bump switch states
 const int BUMPSWITCH_BODY_LEN = 4;   // bytes following the tag excluding END_SYSEX
 
 const int DISTANCE_REQUEST    = 9;   // distance in cm (range 0-275)
+const int DISTANCE_REQUEST2    = 10;
 const int DISTANCE_BODY_LEN   = 2;   // bytes following the tag excluding END_SYSEX
 
 /**** end of message tag enumerations ****/
@@ -230,6 +242,19 @@ void distanceSensorDataRequest()
   Serial.write(END_SYSEX); 
   DEBUG_PRINTln(value);  
 }
+
+void distanceSensor2DataRequest()
+{
+
+  int value = distanceSensor2GetData();  
+  Serial.write(START_SYSEX);
+  Serial.write(MYRTLE_DATA);
+  Serial.write(DISTANCE_REQUEST2);
+  Serial.write(DISTANCE_BODY_LEN); 
+  sendValueAsTwo7bitBytes(value);
+  Serial.write(END_SYSEX); 
+  DEBUG_PRINTln(value);  
+}
   
 void  sendValueAsTwo7bitBytes(int value)
 {
@@ -308,6 +333,9 @@ void sysexCallback(byte command, byte argc, byte *argv)
     }
     else if(argv[0] == DISTANCE_REQUEST){ 
        distanceSensorDataRequest();
+    }
+    else if(argv[0] == DISTANCE_REQUEST2){ 
+       distanceSensor2DataRequest();
     }
    
     break;

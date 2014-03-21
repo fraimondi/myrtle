@@ -14,6 +14,7 @@
 #include <Servo.h>
 #include <Firmata.h>
 
+//#define MYRTLE_FIRMATA // define this to select only A1 through A3 for analog output
 
 #define MAX_QUERIES 8
 #define MINIMUM_SAMPLING_INTERVAL 10
@@ -54,6 +55,7 @@ const int irControlPin                 =  14; // A0
 const int nbrSwitches                  = 2;
 const int bumpSwitchPins[nbrSwitches]  = {A4, A5};
 const int pingSensorPin                = 5; // trig and echo pins connected together (TODO - change if using different Arduino pin)
+const int pingSensorPin2                = 6; // trig and echo pins connected together (TODO - change if using different Arduino pin)
 
 Servo servos[MAX_SERVOS];
 
@@ -258,6 +260,7 @@ void setSpeed( int motor, int speed)
 void setup()
 {
   firmataSysexBegin();
+#ifdef MYRTLE_FIRMATA
   encodersBegin();
   initWheels();
   for (int sw = 0; sw < nbrSwitches; sw++) {
@@ -265,10 +268,11 @@ void setup()
   }
   pinMode(irControlPin, OUTPUT);
   digitalWrite(irControlPin, LOW); // turn off (until needed)
+#endif
 }
 
 
-#define MYRTLE_FIRMATA // define this to select only A1 through A3 for analog output
+
 void loop()
 {
   byte pin, analogPin;
@@ -298,7 +302,9 @@ void loop()
 #endif
     }
     if (spontaneousMsgs) {
+#ifdef MYRTLE_FIRMATA    
       encoderDataRequest();
+#endif      
     }
   }  
 }
@@ -352,6 +358,34 @@ const long MAX_DURATION =   (MAX_DISTANCE * 58);
   // if pulse does not arrive in this time then ping sensor may not be connected
   // if you need to increase this then you must change the distanceSensorDataRequest message body size
   long duration = pulseIn(pingSensorPin, HIGH, MAX_DURATION); 
+  // convert the time into a distance
+  // The speed of sound is 340 m/s or 29 microseconds per centimeter.
+  // The ping travels out and back, so to find the distance of the
+  // object we take half of the distance travelled.
+  int cm = (duration / 29) / 2;
+  return cm;  
+}
+
+int distanceSensor2GetData()
+{
+const long MAX_DISTANCE = 100;  
+const long MAX_DURATION =   (MAX_DISTANCE * 58);
+
+  // The sensor is triggered by a HIGH pulse of 2 or more microseconds.
+  // Give a short LOW pulse beforehand to ensure a clean HIGH pulse:
+  pinMode(pingSensorPin2, OUTPUT);
+  digitalWrite(pingSensorPin2, LOW);
+  delayMicroseconds(4);
+  digitalWrite(pingSensorPin2, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(pingSensorPin2, LOW);
+
+  pinMode(pingSensorPin2, INPUT); 
+  
+  // limit pulseIn duration to a max of 275cm (just under 16ms) 
+  // if pulse does not arrive in this time then ping sensor may not be connected
+  // if you need to increase this then you must change the distanceSensorDataRequest message body size
+  long duration = pulseIn(pingSensorPin2, HIGH, MAX_DURATION); 
   // convert the time into a distance
   // The speed of sound is 340 m/s or 29 microseconds per centimeter.
   // The ping travels out and back, so to find the distance of the
