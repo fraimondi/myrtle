@@ -28,7 +28,7 @@ public class ArduinoBoard {
 	/* TODO: add automatic port recognition, similar to Racket? */
 	public ArduinoBoard(String port) {
 		firmata = new Firmata(new FirmataWriter());
-		serialPort = new SerialPort("/dev/tty.usbmodem1411");
+		serialPort = new SerialPort(port);
 
         try {
             serialPort.openPort();//Open port
