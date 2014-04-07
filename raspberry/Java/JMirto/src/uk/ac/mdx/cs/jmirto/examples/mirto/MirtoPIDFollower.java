@@ -112,4 +112,9 @@ public class MirtoPIDFollower {
 			e.printStackTrace();
 		}
 	}
+	
+	public static void main(String[] args) {
+		MirtoPIDFollower mytest = new MirtoPIDFollower();
+		mytest.navigate();
+	}
 }
