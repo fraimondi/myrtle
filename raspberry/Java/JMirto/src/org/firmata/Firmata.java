@@ -98,6 +98,19 @@ public class Firmata {
   private final int SAMPLING_INTERVAL      = 0x7A; // set the poll rate of the main loop
   private final int SYSEX_NON_REALTIME     = 0x7E; // MIDI Reserved for non-realtime messages
   private final int SYSEX_REALTIME         = 0x7F; // MIDI Reserved for realtime messages
+  
+  // Franco 140407: Myrtle-specific sysex messages
+  private final int MYRTLE_DATA 			= 0x7D;
+  private final int ENCODER_REQUEST			= 1;
+  private final int ENABLE_SPONTANEUS_MSGS	= 2;
+  private final int DISABLE_SPONTANEUS_MSGS	= 3;
+  private final int SET_SPONTANEUS_MSGS_INTERVAL = 4;
+  private final int SET_WHEEL1_SPEED		= 5;
+  private final int SET_WHEEL2_SPEED		= 6;
+  private final int IRSENSOR_REQUEST		= 7;
+  private final int BUMPSWITCH_REQUEST		= 8;
+  private final int DISTANCE_REQUEST		= 9;
+  
 
   int waitForData = 0;
   int executeMultiByteCommand = 0;
@@ -109,6 +122,10 @@ public class Firmata {
   int[] digitalOutputData = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
   int[] digitalInputData  = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
   int[] analogInputData   = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+  
+  // Franco 140407: for encoders count and distance
+  int[] encodersCount = { 0, 0 };
+  int sonarDistance = 0;
   
   private final int MAX_PINS = 128;
   
@@ -160,7 +177,7 @@ public class Firmata {
       out.write(1);
     }
   }
-  
+
   /**
    * Returns the last known value read from the digital pin: HIGH or LOW.
    *
@@ -270,34 +287,9 @@ public class Firmata {
   }
 
   private void processSysexMessage() {
-//    System.out.print("[ ");
-//    for (int i = 0; i < storedInputData.length; i++) System.out.print(storedInputData[i] + " ");
-//    System.out.println("]");
+
     switch(storedInputData[0]) { //first byte in buffer is command
-//      case CAPABILITY_RESPONSE:
-//        for (int pin = 0; pin < pinModes.length; pin++) {
-//          pinModes[pin] = 0;
-//        }
-//        for (int i = 1, pin = 0; pin < pinModes.length; pin++) {
-//          for (;;) {
-//            int val = storedInputData[i++];
-//            if (val == 127) break;
-//            pinModes[pin] |= (1 << val);
-//            i++; // skip mode resolution for now
-//          }
-//          if (i == sysexBytesRead) break;
-//        }
-//        for (int port = 0; port < pinModes.length; port++) {
-//          boolean used = false;
-//          for (int i = 0; i < 8; i++) {
-//            if (pinModes[port * 8 + pin] & (1 << INPUT) != 0) used = true;
-//          }
-//          if (used) {
-//            out.write(REPORT_DIGITAL | port);
-//            out.write(1);
-//          }
-//        }
-//        break;
+    
       case ANALOG_MAPPING_RESPONSE:
         for (int pin = 0; pin < analogChannel.length; pin++)
           analogChannel[pin] = 127;
@@ -310,9 +302,51 @@ public class Firmata {
           }
         }
         break;
+        
+      case MYRTLE_DATA:
+    	  processMyrtleData();
+    	  break;
+    	  
     }
   }
+  
+  // Franco 140407: process the sysex message from Myrtle (see 
+  // online documentation for details, or the Racket implementation)
+  private void processMyrtleData() {
+	  
+	  switch(storedInputData[1]) {
 
+	  	case ENCODER_REQUEST:
+	  		// A reply containing an update for encorders: we update local
+	  		// values.
+	  		int count1 = (storedInputData[3] << 7) + storedInputData[2];
+	  		count1 = convertSignedTwoByteValue(count1);
+	  		int count2 = (storedInputData[7] << 7) + storedInputData[6];
+	  		count2 = convertSignedTwoByteValue(count2);
+	  		encodersCount[0] += count1;
+	  		encodersCount[1] += count2;
+	  		break;
+
+	  	case DISTANCE_REQUEST:
+	  		// A reply containing distance values
+	  		int distance = (storedInputData[4] << 7) + storedInputData[3];
+	  		sonarDistance = distance;
+	  		break;	  		
+	  
+	  }
+  }
+  
+  
+  // converts to negative if the bit value in signBit position (14) is high
+  private int convertSignedTwoByteValue(int val)
+  {
+      if (val >= 0x2000)
+      {
+          val = -(val & 0x1fff); // remove sign bit and negate val
+      }
+      return val;
+  }
+  
   public void processInput(int inputData) {
     int command;
     
@@ -320,9 +354,8 @@ public class Firmata {
     
     if (parsingSysex) {
       if (inputData == END_SYSEX) {
-    	  System.out.println("   DEGUB: start sysex");
     	  parsingSysex = false;
-        processSysexMessage();
+    	  processSysexMessage();
       } else {
         storedInputData[sysexBytesRead] = inputData;
         sysexBytesRead++;
@@ -364,11 +397,53 @@ public class Firmata {
         executeMultiByteCommand = command;
         break;      
       case START_SYSEX:
-    	  System.out.println("   DEGUB: starting sysex");
         parsingSysex = true;
         sysexBytesRead = 0;
         break;
       }
     }
   }
+  
+  // Franco 140407: add sysex messages
+  public void sendSysexMessage(byte cmd, byte tag) {
+	    out.write(START_SYSEX);
+	    out.write(cmd);
+	    out.write(tag);
+	    out.write(END_SYSEX);
+  }
+  
+  // Franco 140407: add sysex messages
+  public void sendSysexMessage(byte cmd, byte tag, byte value) {
+	    out.write(START_SYSEX);
+	    out.write(cmd);
+	    out.write(tag);
+	    out.write(value);
+	    out.write(END_SYSEX);
+  }
+  
+  public void sendSysexMessage(byte cmd, byte tag, int value) {
+	  	byte LSB;
+      	byte MSB;
+      	LSB = (byte)(value & 0x7f);
+      	MSB = (byte)((value >> 7) & 0x7f);
+	    
+      	
+      	out.write(START_SYSEX);
+	    out.write(cmd);
+	    out.write(tag);
+	    out.write(LSB);
+	    out.write(MSB);
+	    
+	    out.write(END_SYSEX);
 }
+  
+  public int getSonarDistance() {
+	  return sonarDistance;
+  }	
+  
+  // FIXME: add check for range of num
+  public int getCount(int num){
+	  return encodersCount[num];
+  }
+}
+  

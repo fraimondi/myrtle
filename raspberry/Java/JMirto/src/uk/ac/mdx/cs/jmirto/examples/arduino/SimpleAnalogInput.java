@@ -6,7 +6,7 @@
  * 
  **/
 
-package uk.ac.mdx.cs.jmirto.examples;
+package uk.ac.mdx.cs.jmirto.examples.arduino;
 
 import org.firmata.Firmata;
 import uk.ac.mdx.cs.jmirto.arduino.ArduinoBoard;

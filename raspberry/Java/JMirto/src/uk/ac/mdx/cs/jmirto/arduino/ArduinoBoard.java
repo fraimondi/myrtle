@@ -85,4 +85,19 @@ public class ArduinoBoard {
         }
     }
 	
+	public void shutdown() {
+		try {
+			serialPort.closePort();
+			Thread.sleep(500);
+			serialPort = null;
+		} catch (SerialPortException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
 }

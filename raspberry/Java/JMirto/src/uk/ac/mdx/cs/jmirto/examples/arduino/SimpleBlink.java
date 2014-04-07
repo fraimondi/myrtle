@@ -2,7 +2,7 @@
  * Franco 140404: the old classic blink on pin 13
  */
 
-package uk.ac.mdx.cs.jmirto.examples;
+package uk.ac.mdx.cs.jmirto.examples.arduino;
 
 import org.firmata.Firmata;
 import uk.ac.mdx.cs.jmirto.arduino.ArduinoBoard;
