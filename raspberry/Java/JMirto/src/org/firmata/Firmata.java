@@ -290,6 +290,9 @@ public class Firmata {
 
     switch(storedInputData[0]) { //first byte in buffer is command
     
+    	// Franco: commented out
+
+    /*
       case ANALOG_MAPPING_RESPONSE:
         for (int pin = 0; pin < analogChannel.length; pin++)
           analogChannel[pin] = 127;
@@ -302,7 +305,7 @@ public class Firmata {
           }
         }
         break;
-        
+      */  
       case MYRTLE_DATA:
     	  processMyrtleData();
     	  break;
