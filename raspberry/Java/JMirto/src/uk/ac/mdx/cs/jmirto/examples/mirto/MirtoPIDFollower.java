@@ -42,7 +42,7 @@ public class MirtoPIDFollower {
 	
 	public void navigate() {
 		
-		JMirtoRobot robot = new JMirtoRobot("/dev/tty.usbmodem1411");
+		JMirtoRobot robot = new JMirtoRobot("/dev/ttyAMA0");
 
 		try {
 			System.out.println("Starting in 2 seconds...");
@@ -97,9 +97,15 @@ public class MirtoPIDFollower {
 					}
 				
 					if (delta < 0) {
-						robot.setMotors( (PWR+delta), -PWR);
+//						robot.setMotors( (PWR+delta), -PWR);
+						System.out.println("DEBUG: "+leftIR+" "+middleIR+" "+rightIR+
+								"; Error: "+curError+"; delta: "+delta+
+								" PWR: "+(PWR+delta)+","+ (-PWR));
 					} else {
-						robot.setMotors( PWR, -(PWR-delta) );
+//						robot.setMotors( PWR, -(PWR-delta) );
+						System.out.println("DEBUG: "+leftIR+" "+middleIR+" "+rightIR+
+								"; Error: "+curError+"; delta: "+delta+
+								" PWR: "+PWR+","+ (-(PWR-delta)));
 					}
 					oldTime = timeNow;
 				}
