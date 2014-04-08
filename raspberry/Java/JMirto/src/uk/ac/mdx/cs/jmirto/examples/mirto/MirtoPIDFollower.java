@@ -10,12 +10,12 @@ public class MirtoPIDFollower {
 	
 	private int cutOffIR = 40;
 	
-	private int PWR = 90;
+	private int PWR = 60;
 	
 	private int freq = 50; // frequency of updates;
 	private int maxDelta = PWR; // max correction
 
-	private double Kp = 0.03;
+	private double Kp = 0.026;
 	private double Kd = 1.4;
 	private double Ki = 0.0001;
 	
@@ -97,15 +97,9 @@ public class MirtoPIDFollower {
 					}
 				
 					if (delta < 0) {
-//						robot.setMotors( (PWR+delta), -PWR);
-						System.out.println("DEBUG: "+leftIR+" "+middleIR+" "+rightIR+
-								"; Error: "+curError+"; delta: "+delta+
-								" PWR: "+(PWR+delta)+","+ (-PWR));
+						robot.setMotors( (PWR+delta), -PWR);
 					} else {
-//						robot.setMotors( PWR, -(PWR-delta) );
-						System.out.println("DEBUG: "+leftIR+" "+middleIR+" "+rightIR+
-								"; Error: "+curError+"; delta: "+delta+
-								" PWR: "+PWR+","+ (-(PWR-delta)));
+						robot.setMotors( PWR, -(PWR-delta) );
 					}
 					oldTime = timeNow;
 				}
