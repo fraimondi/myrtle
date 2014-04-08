@@ -347,6 +347,24 @@ public class Firmata {
       return val;
   }
   
+  private int convertSignedInt(int val) {
+	  
+	  int signBit = 0x0;
+	  
+	  if ( val < 0 ) {
+		  signBit = 0x2000;
+		  val = -val;
+	  }
+	  
+	  if ( val > 0x1FFF ) {
+		  val = 0x1FFF;
+	  }
+	  
+	  val = val | signBit;
+	  return val;
+  }
+  
+  
   public void processInput(int inputData) {
     int command;
     
@@ -424,6 +442,9 @@ public class Firmata {
   public void sendSysexMessage(byte cmd, byte tag, int value) {
 	  	byte LSB;
       	byte MSB;
+      	
+      	value = convertSignedInt(value);
+      	
       	LSB = (byte)(value & 0x7f);
       	MSB = (byte)((value >> 7) & 0x7f);
 	    
