@@ -14,6 +14,7 @@ public class Robot2CANT23 extends CANT23{
 
 	private static JMirtoRobot robot;
 
+	private static int PWR = 40; // the base wheel speed
 
 	public static void main(String args[]){
 		System.out.println("initialize CANT robot2 ");
@@ -31,7 +32,7 @@ public class Robot2CANT23 extends CANT23{
 
 	private static void firmataSetup() {
 
-		JMirtoRobot robot = new JMirtoRobot("/dev/ttyAMA0");
+		robot = new JMirtoRobot("/dev/ttyAMA0");
 
 		try {
 			System.out.println("Starting in 2 seconds...");
@@ -41,7 +42,7 @@ public class Robot2CANT23 extends CANT23{
 			robot.enableIR();
 
 			Thread.sleep(500);
-
+			
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -55,16 +56,13 @@ public class Robot2CANT23 extends CANT23{
 
 		// FIXME: CHeck with Chris!
 		if (neuronsFiring > 45) {
-			if (wheel == 5) messageValue = 80;
-			else if (wheel == 6) messageValue = 80;
+			messageValue = PWR + 21;
 		}
 		else if (neuronsFiring > 30) {
-			if (wheel == 5) messageValue = 70;
-			else if (wheel == 6) messageValue = 70;
+			messageValue = PWR + 14;
 		}
 		else if (neuronsFiring > 15) {
-			if (wheel == 5) messageValue = 60;
-			else if (wheel == 6) messageValue = 60;
+			messageValue = PWR + 7;
 		}
 		
 		if (wheel == 5) {
