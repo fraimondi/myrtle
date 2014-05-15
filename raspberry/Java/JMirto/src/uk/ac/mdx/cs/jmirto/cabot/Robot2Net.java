@@ -19,8 +19,8 @@ public class Robot2Net extends CANTNet {
 		if (sensorVal < 20 ) return 0;
 		else if (sensorVal < 100 ) return 20;
 		else if (sensorVal < 200 ) return 40;
-		else if (sensorVal < 500 ) return 60;
-		else if (sensorVal < 1000 ) return 80;
+		else if (sensorVal < 300 ) return 60;
+		else if (sensorVal < 500 ) return 80;
 		else return 100;
 	}
 

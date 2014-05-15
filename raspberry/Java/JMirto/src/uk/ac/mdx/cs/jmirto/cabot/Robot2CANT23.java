@@ -14,7 +14,7 @@ public class Robot2CANT23 extends CANT23{
 
 	private static JMirtoRobot robot;
 
-	private static int PWR = 40; // the base wheel speed
+	private static int PWR = 30; // the base wheel speed
 
 	public static void main(String args[]){
 		System.out.println("initialize CANT robot2 ");
