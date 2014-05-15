@@ -52,23 +52,24 @@ public class Robot2CANT23 extends CANT23{
 	}
 
 	public static void setWheelOn(int wheel, int neuronsFiring) {
-		int messageValue = wheel*10;
+
+		int messageValue = PWR;
 
 		// FIXME: CHeck with Chris!
 		if (neuronsFiring > 45) {
-			messageValue = PWR + 21;
+			messageValue = PWR + 30;
 		}
 		else if (neuronsFiring > 30) {
-			messageValue = PWR + 14;
+			messageValue = PWR + 20;
 		}
 		else if (neuronsFiring > 15) {
-			messageValue = PWR + 7;
+			messageValue = PWR + 10;
 		}
 		
 		if (wheel == 5) {
 			robot.setMotor(0,messageValue);
 		} else if (wheel == 6) {
-			robot.setMotor(1,messageValue);
+			robot.setMotor(1,-messageValue);
 		}
 		
 		

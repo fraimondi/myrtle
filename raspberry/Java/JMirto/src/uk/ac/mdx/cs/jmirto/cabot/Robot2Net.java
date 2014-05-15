@@ -39,12 +39,11 @@ public class Robot2Net extends CANTNet {
 		}
 		totalPoints = newPoints;
 
-		/*      ignore IR2 for now
-      newPoints = getSensorNeuronsFiring(IR2);
-      for (int newPoint = 0; newPoint < newPoints; newPoint++) {
-	  points[totalPoints+newPoint] = newPoint+100;
-      }
-      totalPoints += newPoints;*/
+		newPoints = getSensorNeuronsFiring(IR2);
+		for (int newPoint = 0; newPoint < newPoints; newPoint++) {
+			points[totalPoints+newPoint] = newPoint+100;
+		}
+		totalPoints += newPoints;
 
 		newPoints = getSensorNeuronsFiring(IR3);
 		for (int newPoint = 0; newPoint < newPoints; newPoint++) {
