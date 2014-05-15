@@ -1,0 +1,14 @@
+<Nets>
+	<Net Name ="BaseNet" Cols ="10" Rows="10" Topology="-1" activationThreshold="4.5"  axonalStrengthMedian="0.9" changeEachTime ="false"  compensatoryDivisor="10" learningOn="1" connectionStrength="0.02" connectivity="0.8"  decay="1.1" fatigueRate= "0.8" fatigueRecoveryRate="0.5" learningRate="0.005" likelihoodOfInhibitoryNeuron="25" neuronsFatigue="true" neuronsToStimulate="25" saturationBase="20"  spontaneousActivationOn="false" cyclesPerRun="50" >
+		<Patterns>
+			<Pattern Name="One"  Number="1" >
+				<Rectangle StartIndex="0" EndIndex="49" />
+			</Pattern>
+			<Pattern Name="Two" Number="2" >
+				<Rectangle StartIndex="50" EndIndex="99" />
+			</Pattern>
+		</Patterns>
+	</Net>
+
+</Nets>
+
