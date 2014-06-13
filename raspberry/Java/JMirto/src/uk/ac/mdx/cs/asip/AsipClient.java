@@ -1,11 +1,10 @@
-package uk.ac.mdx.cs.aimp;
+package uk.ac.mdx.cs.asip;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 /*
  * @author Franco Raimondi
- * A Java client for the Arduino message passing protocol (FIXME)
+ * A Java client for the Arduino service interface protocol
  */
 public class AsipClient {
 	
@@ -54,9 +53,15 @@ public class AsipClient {
     // position(y)->pin(z).
     // (see below the description of processPinMapping())
     private HashMap<Integer,HashMap<Integer,Integer>> portMapping;
-	/************   END PRIVATE FIELDS DEFINITION ****************/
-
     
+    // A map from service IDs to actual implementations
+    private HashMap<Character,AsipService> services;
+    
+    // The output channel (where we write messages). This should typically
+    // be a serial port, but could be anything else.
+    private AsipWriter out;
+	/************   END PRIVATE FIELDS DEFINITION ****************/
+ 
     // A simple constructor to initialize things
     public AsipClient() {    		
     	
@@ -67,9 +72,13 @@ public class AsipClient {
     	
     	if (DEBUG) {
     		System.out.println("End of constructor: arrays and maps created");
-    	}
-    	
-    	
+    	}	
+    } // end of default constructor
+    
+    // A constructor taking the writer as parameter.
+    public AsipClient(AsipWriter w) {
+    	this(); // calling default constructor
+    	out = w;
     }
     
     /************ BEGIN PUBLIC METHODS *************/
@@ -101,19 +110,31 @@ public class AsipClient {
 	
 	/* TODO: add setPinMode() */
 	
+	// It is possible to add services at run-time:
+	public void addService(char serviceID, AsipService s) {
+		services.put(serviceID,s);
+	}
+
+	// Just return the list of services
+	public HashMap<Character,AsipService> getServices() {
+		return services;
+	}
 	
 	// I'm not sure we want this public... FIXME?
     public int[] getDigitalPins() { return digital_input_pins; }
+    
+    // Getter and Setter for output channel
+    public AsipWriter getAsipWriter() { return out; };
+    public void setAsipWriter(AsipWriter w) { out = w; }
     /************ END PUBLIC METHODS *************/
 	
     /************ BEGIN PRIVATE METHODS *************/
     
     // A method to do what is says on the tin... 
     private void handleInputEvent(String input) {
-   		switch (input.charAt(1)) {
-		
-		// Digital pins (in port)
-		case IO_SERVICE: 
+   		if (input.charAt(1) == IO_SERVICE) {		
+   			// Digital pins (in port)
+		 
 			/* the port data event is something like:
 			@I,P,4,F	
 			this message says the data on port 4 has a value of F */
@@ -128,9 +149,17 @@ public class AsipClient {
 			else {
 				System.out.println("Service not recognised in position 3 for I/O service: " + input);
 			}			
-			break;
-					
-		default:
+   		} // end of IO_SERVICE
+   
+   		
+   		else if ( services.keySet().contains(input.charAt(1)) ) {
+   			// Is this one of the services we know? If this is the case,
+   			// we call it and we process the input
+   			services.get(input.charAt(1)).processResponse(input);
+   		}
+   		
+   		else {
+   			// We don't know what to do with it.
 			System.out.println("Event not recognised at position 1: " + input);
 		}
     }
