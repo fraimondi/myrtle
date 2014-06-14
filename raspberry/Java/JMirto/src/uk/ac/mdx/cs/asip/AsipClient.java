@@ -38,8 +38,8 @@ public class AsipClient {
     private final char EVENT_HANDLER 			= '@'; // Standard incoming message
     private final char ERROR_MESSAGE_HEADER 	= '~'; // Incoming message: error report
     
-    private final byte HIGH 	= 	1;
-    private final byte LOW 		= 	0;
+    public static final byte HIGH 	= 	1;
+    public static final byte LOW 		= 	0;
 	/************   END CONSTANTS DEFINITION ****************/
 
     
@@ -99,16 +99,42 @@ public class AsipClient {
 			// FIXME: better error handling required!
 			System.out.println("Strange character received at position 0: "
 					+ input);
-
 		}
 
 	}
     
-	/* TODO: add digitalRead() */
+	public int digitalRead(int pin) {
+		// FIXME: lazy Franco, you should add error checking here!
+		return digital_input_pins[pin];
+	}
 	
-	/* TODO: add analogRead() */
+	public int analogRead(int pin) {
+		// FIXME: lazy Franco, you should add error checking here!		
+		return analog_input_pins[pin];
+	}
 	
-	/* TODO: add setPinMode() */
+	public void setPinMode(int pin, int mode) {
+		out.write(IO_SERVICE+","+PIN_MODE+","+pin+","+mode);
+		if (DEBUG) {
+			System.out.println("DEBUG: Setting pin mode with "+IO_SERVICE+","+PIN_MODE+","+pin+","+mode);
+		}
+	}
+	
+	// A method to write to a digital pin
+	public void digitalWrite(int pin, int value) {
+		out.write(IO_SERVICE+","+DIGITAL_WRITE+","+pin+","+value);
+		if (DEBUG) {
+			System.out.println("DEBUG: Setting digital pin with "+IO_SERVICE+","+DIGITAL_WRITE+","+pin+","+value);
+		}
+	}
+	
+	// A method to write to an analog pin
+	public void analoglWrite(int pin, int value) {
+		out.write(IO_SERVICE+","+ANALOG_WRITE+","+pin+","+value);
+		if (DEBUG) {
+			System.out.println("DEBUG: Setting analog pin with "+IO_SERVICE+","+DIGITAL_WRITE+","+pin+","+value);
+		}
+	}
 	
 	// It is possible to add services at run-time:
 	public void addService(char serviceID, AsipService s) {
@@ -145,6 +171,14 @@ public class AsipClient {
 				processPortData(port,bitmask);				
 			} else if ( input.charAt(3) == PORT_MAPPING ) {
 				processPinMapping(input);
+			} else if (input.charAt(3) == ANALOG_VALUE) {
+				int pin = Integer.parseInt(input.split(",")[2]);
+				int value = Integer.parseInt(input.split(",")[3]);
+				analog_input_pins[pin] = value;
+				if (DEBUG) {
+					System.out.println("DEBUG: received message "+input);
+					System.out.println("DEBUG: setting analog pin "+pin+" to "+value);
+				}
 			}
 			else {
 				System.out.println("Service not recognised in position 3 for I/O service: " + input);
