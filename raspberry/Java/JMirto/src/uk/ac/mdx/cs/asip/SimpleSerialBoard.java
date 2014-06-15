@@ -30,6 +30,8 @@ public class SimpleSerialBoard {
 		
 		serialPort = new SerialPort(port);
 
+		asip = new AsipClient(new SimpleWriter());
+		
 		try {
 			serialPort.openPort();// Open port
 			serialPort.setParams(57600, 8, 1, 0);// Set params
@@ -49,7 +51,6 @@ public class SimpleSerialBoard {
 			e.printStackTrace();
 		}
 
-		asip = new AsipClient(new SimpleWriter());
 	}
 	
 	// The following 5 methods are just a replica from the asip class.

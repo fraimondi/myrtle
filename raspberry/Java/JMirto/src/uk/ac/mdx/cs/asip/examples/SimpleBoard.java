@@ -22,7 +22,8 @@ public class SimpleBoard extends SimpleSerialBoard {
 		SimpleBoard testBoard = new SimpleBoard("/dev/tty.usbmodem1411");
 		
 		testBoard.setPinMode(13, AsipClient.OUTPUT);
-		
+
+		/*
 		while(true) {
 			try {
 				testBoard.digitalWrite(13, AsipClient.HIGH);
@@ -33,6 +34,7 @@ public class SimpleBoard extends SimpleSerialBoard {
 				e.printStackTrace();
 			}
 		}
+		*/
 	}
 	
 }

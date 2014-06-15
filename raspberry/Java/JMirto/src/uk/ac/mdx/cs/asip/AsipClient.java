@@ -25,15 +25,11 @@ public class AsipClient {
 	private final char PORT_MAPPING		= 'M'; // i/o event from Arduino is port mapping to pins
 
 	// Pin modes (these are public)
-    public static final int INPUT  			=	0x00; 	// defined in Arduino.h
-    public static final int OUTPUT 			= 	0x01; 	// defined in Arduino.h
-    public static final int INPUT_PULLUP 	=  	0x02; 	// defined in Arduino.h
-    public static final int ANALOG 			=	0x03; 	// analog pin in analogInput mode
-    public static final int PWM				=	0x04; 	// digital pin in PWM output mode
-    public static final int SERVO 			=	0x05;   // digital pin in servo mode
-    public final int OTHER					=	0xFF;   // High level device not handled at pin level,
-    													// this is the default mode for any pin not 
-    													// explicitly set to one of the other modes
+    public static final int INPUT  			=	1; 	// defined in Arduino.h
+    public static final int INPUT_PULLUP 	=  	2; 	// defined in Arduino.h
+    public static final int OUTPUT 			= 	3; 	// defined in Arduino.h
+    public static final int ANALOG 			=	4; 	// analog pin in analogInput mode
+    public static final int PWM				=	5; 	// digital pin in PWM output mode
     
     private final char EVENT_HANDLER 			= '@'; // Standard incoming message
     private final char ERROR_MESSAGE_HEADER 	= '~'; // Incoming message: error report
@@ -85,6 +81,10 @@ public class AsipClient {
     // This method processes an input received on the serial port.
     // See protocol description for more detailed information.
 	public void processInput(String input) {
+		
+		if (DEBUG) {
+			System.out.println("DEBUG: I've received the following string: "+input);
+		}
 		switch (input.charAt(0)) {
 
 		case EVENT_HANDLER:
