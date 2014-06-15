@@ -21,20 +21,18 @@ public class SimpleBoard extends SimpleSerialBoard {
 		
 		SimpleBoard testBoard = new SimpleBoard("/dev/tty.usbmodem1411");
 		
-		testBoard.setPinMode(13, AsipClient.OUTPUT);
+		testBoard.setPinMode(52, AsipClient.OUTPUT);
 
-		/*
 		while(true) {
 			try {
-				testBoard.digitalWrite(13, AsipClient.HIGH);
+				testBoard.digitalWrite(52, AsipClient.HIGH);
 				Thread.sleep(1000);
-				testBoard.digitalWrite(13, AsipClient.LOW);
+				testBoard.digitalWrite(52, AsipClient.LOW);
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
-		*/
 	}
 	
 }
