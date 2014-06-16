@@ -34,7 +34,7 @@ public class SimpleSerialBoard {
 		
 		try {
 			serialPort.openPort();// Open port
-			serialPort.setParams(57600, 8, 1, 0);// Set params
+			serialPort.setParams(250000, 8, 1, 0);// Set params
 			int mask = SerialPort.MASK_RXCHAR + SerialPort.MASK_CTS
 					+ SerialPort.MASK_DSR;// Prepare mask
 			serialPort.setEventsMask(mask);// Set mask
@@ -53,7 +53,7 @@ public class SimpleSerialBoard {
 
 	}
 	
-	// The following 5 methods are just a replica from the asip class.
+	// The following methods are just a replica from the asip class.
 	public int digitalRead(int pin) {
 		return asip.digitalRead(pin);
 	}	
@@ -68,6 +68,9 @@ public class SimpleSerialBoard {
 	}
 	public void analoglWrite(int pin, int value) {
 		asip.analoglWrite(pin, value);
+	}
+	public void requestPortMapping() {
+		asip.requestPortMapping();
 	}
 	
 	// As described above, SimpleSerialBoard writes messages to

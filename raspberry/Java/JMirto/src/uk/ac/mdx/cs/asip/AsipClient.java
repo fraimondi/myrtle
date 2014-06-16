@@ -1,6 +1,7 @@
 package uk.ac.mdx.cs.asip;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 
 /*
  * @author Franco Raimondi
@@ -20,7 +21,7 @@ public class AsipClient {
 	private final char PIN_MODE     	= 'P'; // i/o request  to Arduino to set pin mode
 	private final char DIGITAL_WRITE	= 'D'; // i/o request  to Arduino is digitalWrite
 	private final char ANALOG_WRITE  	= 'A'; // i/o request to Arduino is analogWrite)
-	private final char PORT_DATA     	= 'p'; // i/o event from Arduino is digital port data
+	private final char PORT_DATA     	= 'P'; // i/o event from Arduino is digital port data
 	private final char ANALOG_VALUE  	= 'a'; // i/o event from Arduino is value of analog pin
 	private final char PORT_MAPPING		= 'M'; // i/o event from Arduino is port mapping to pins
 
@@ -50,8 +51,10 @@ public class AsipClient {
     // (see below the description of processPinMapping())
     private HashMap<Integer,HashMap<Integer,Integer>> portMapping;
     
-    // A map from service IDs to actual implementations
-    private HashMap<Character,AsipService> services;
+    // A map from service IDs to actual implementations.
+    // FIXME: there could be more than one service with the same ID!
+    // (two servos, two distance sensors, etc).
+    private HashMap<Character,LinkedList<AsipService>> services;
     
     // The output channel (where we write messages). This should typically
     // be a serial port, but could be anything else.
@@ -102,6 +105,16 @@ public class AsipClient {
 		}
 
 	}
+	
+	// A method to request the mapping between ports and pins, see 
+	// processPortData and processPinMapping for additional details
+	// on the actual mapping.
+	public void requestPortMapping() {
+		out.write(IO_SERVICE+","+PORT_MAPPING);
+		if (DEBUG) {
+			System.out.println("DEBUG: Requesting port mapping with "+IO_SERVICE+","+PORT_MAPPING);
+		}
+	}
     
 	public int digitalRead(int pin) {
 		// FIXME: lazy Franco, you should add error checking here!
@@ -137,12 +150,12 @@ public class AsipClient {
 	}
 	
 	// It is possible to add services at run-time:
-	public void addService(char serviceID, AsipService s) {
+	public void addService(char serviceID, LinkedList<AsipService> s) {
 		services.put(serviceID,s);
 	}
 
 	// Just return the list of services
-	public HashMap<Character,AsipService> getServices() {
+	public HashMap<Character,LinkedList<AsipService>> getServices() {
 		return services;
 	}
 	
@@ -189,7 +202,10 @@ public class AsipClient {
    		else if ( services.keySet().contains(input.charAt(1)) ) {
    			// Is this one of the services we know? If this is the case,
    			// we call it and we process the input
-   			services.get(input.charAt(1)).processResponse(input);
+   			// I want a map function here!! For the moment we use a for loop...
+   			for (AsipService s: services.get(input.charAt(1))) {
+   				s.processResponse(input);
+   			}
    		}
    		
    		else {
