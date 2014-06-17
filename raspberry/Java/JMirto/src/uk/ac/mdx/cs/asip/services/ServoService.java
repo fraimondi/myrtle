@@ -1,4 +1,6 @@
-package uk.ac.mdx.cs.asip;
+package uk.ac.mdx.cs.asip.services;
+
+import uk.ac.mdx.cs.asip.AsipClient;
 
 // A service for servos. 
 

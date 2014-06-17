@@ -3,6 +3,8 @@ package uk.ac.mdx.cs.asip;
 import java.util.HashMap;
 import java.util.LinkedList;
 
+import uk.ac.mdx.cs.asip.services.AsipService;
+
 /*
  * @author Franco Raimondi
  * A Java client for the Arduino service interface protocol
@@ -34,6 +36,7 @@ public class AsipClient {
     
     private final char EVENT_HANDLER 			= '@'; // Standard incoming message
     private final char ERROR_MESSAGE_HEADER 	= '~'; // Incoming message: error report
+    private final char DEBUG_MESSAGE_HEADER		= '!'; // A debug message from the board (can be ignored, probably)
     
     public static final byte HIGH 	= 	1;
     public static final byte LOW 		= 	0;
@@ -68,6 +71,7 @@ public class AsipClient {
     	digital_input_pins = new int[MAX_NUM_DIGITAL_PINS];
     	analog_input_pins = new int[MAX_NUM_ANALOG_PINS];
     	pin_mode = new int[MAX_NUM_DIGITAL_PINS+MAX_NUM_ANALOG_PINS];
+    	services = new HashMap<Character,LinkedList<AsipService>>();
     	
     	if (DEBUG) {
     		System.out.println("End of constructor: arrays and maps created");
@@ -85,25 +89,27 @@ public class AsipClient {
     // See protocol description for more detailed information.
 	public void processInput(String input) {
 		
-		if (DEBUG) {
-			System.out.println("DEBUG: I've received the following string: "+input);
+		if (input.length() > 0) {
+			switch (input.charAt(0)) {
+
+			case EVENT_HANDLER:
+				handleInputEvent(input);
+				break;
+
+			case ERROR_MESSAGE_HEADER:
+				handleInputError(input);
+				break;
+			
+			case DEBUG_MESSAGE_HEADER: 
+				handleDebugEvent(input);
+				break;
+
+			default:
+				// FIXME: better error handling required!
+				System.out.println("Strange character received at position 0: "
+						+ input);
+			}
 		}
-		switch (input.charAt(0)) {
-
-		case EVENT_HANDLER:
-			handleInputEvent(input);
-			break;
-
-		case ERROR_MESSAGE_HEADER:
-			handleInputError(input);
-			break;
-
-		default:
-			// FIXME: better error handling required!
-			System.out.println("Strange character received at position 0: "
-					+ input);
-		}
-
 	}
 	
 	// A method to request the mapping between ports and pins, see 
@@ -150,6 +156,19 @@ public class AsipClient {
 	}
 	
 	// It is possible to add services at run-time:
+	public void addService(char serviceID, AsipService s) {
+		// If there is already a service with the same ID, we add this
+		// new one to the list. Otherwise, we create a new entry.
+		if ( services.containsKey(serviceID)) {
+			services.get(serviceID).add(s);
+		} else {
+			LinkedList<AsipService> servList = new LinkedList<AsipService>();
+			servList.add(s);
+			services.put(serviceID, servList);
+		}
+	}
+	
+	// It is possible to add services at run-time (this one takes a list):
 	public void addService(char serviceID, LinkedList<AsipService> s) {
 		services.put(serviceID,s);
 	}
@@ -222,7 +241,13 @@ public class AsipClient {
     	
     }
     
-    
+    // For the moment we just report board's debug messages on screen
+    // FIXME: do something smarter?
+    private void handleDebugEvent(String input) {
+    	if (DEBUG) {
+    		System.out.println("DEBUG: "+input);
+    	}
+    }
     // A method to process input messages for digital pins. 
     // We get a port and a sequence of bits. The mapping between ports and pins
     // is stored in portMapping. See comments for processPinMapping for additional details.

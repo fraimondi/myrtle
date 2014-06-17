@@ -1,4 +1,6 @@
-package uk.ac.mdx.cs.asip;
+package uk.ac.mdx.cs.asip.services;
+
+import uk.ac.mdx.cs.asip.AsipClient;
 
 public class DistanceService implements AsipService {
 
@@ -19,7 +21,7 @@ public class DistanceService implements AsipService {
 	private final char REQUEST_CONTINUOUS_DISTANCE_REPORTING = 'R';
 	private final char DISTANCE_EVENT = 'e';
 	
-	// The constructor takes the id of the servo.
+	// The constructor takes the id of the distance sensor.
 	public DistanceService(int id, AsipClient c) {
 		this.distanceID = id;
 		this.asip = c;
@@ -42,16 +44,19 @@ public class DistanceService implements AsipService {
 		this.asip.getAsipWriter().write(this.serviceID+","+REQUEST_CONTINUOUS_DISTANCE_REPORTING+","+interval);
 	}
 	
+	public int getDistance() {
+		return this.lastDistance;
+	}
+	
 	public void processResponse(String message) {
-		// A response for a message is something like "@D,e,1,25"
+		// A response for a message is something like "@D,e,1,25,35,..."
 		if (message.charAt(3) != DISTANCE_EVENT) {
 			// FIXME: improve error checking
 			// We have received a message but it is not a distance reporting event
 			System.out.println("Distance message received but I don't know how to process it: "+message);
 		} else {
-			// get the i-th element
+			this.lastDistance = Integer.parseInt(message.split(",")[3+this.distanceID]);
 		}
 	}
-
 	
 }
