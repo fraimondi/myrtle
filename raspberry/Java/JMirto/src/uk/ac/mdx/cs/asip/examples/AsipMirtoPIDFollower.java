@@ -6,13 +6,13 @@ import uk.ac.mdx.cs.asip.JMirtoRobot;
 public class AsipMirtoPIDFollower {
 	private int cutOffIR = 40;
 	
-	private int PWR = 60;
+	private int PWR = 95;
 	
-	private int freq = 50; // frequency of updates;
+	private int freq = 35; // frequency of updates;
 	private int maxDelta = PWR; // max correction
 
-	private double Kp = 0.026;
-	private double Kd = 1.4;
+	private double Kp = 0.050;
+	private double Kd = 1.6;
 	private double Ki = 0.0001;
 	
 	private double curError = 2000;
@@ -38,8 +38,8 @@ public class AsipMirtoPIDFollower {
 	
 	public void navigate() {
 		
-//		JMirtoRobot robot = new JMirtoRobot("/dev/ttyAMA0");
-		JMirtoRobot robot = new JMirtoRobot("/dev/tty.usbmodem1411");
+		JMirtoRobot robot = new JMirtoRobot("/dev/ttyAMA0");
+//		JMirtoRobot robot = new JMirtoRobot("/dev/tty.usbmodem1411");
 		
 		try {
 			System.out.println("Setting up in 2 seconds...");
@@ -67,9 +67,9 @@ public class AsipMirtoPIDFollower {
 				
 				if (( timeNow - oldTime) > freq) {
 
-					int leftIR = cutIR(robot.getIR(3));
-					int middleIR = cutIR(robot.getIR(2));
-					int rightIR = cutIR(robot.getIR(1));
+					int leftIR = cutIR(robot.getIR(2));
+					int middleIR = cutIR(robot.getIR(1));
+					int rightIR = cutIR(robot.getIR(0));
 				
 					curError = computeError(leftIR,middleIR,rightIR,prevError);
 				
@@ -96,9 +96,9 @@ public class AsipMirtoPIDFollower {
 					}
 				
 					if (delta < 0) {
-						robot.setMotors( 255*(PWR+delta), 255*(-PWR));
+						robot.setMotors( (int) (2.55*(PWR+delta)), (int) (2.55*(-PWR)));
 					} else {
-						robot.setMotors( 255*PWR, -(PWR-delta)*255 );
+						robot.setMotors( (int) (2.55*PWR), (int) (-(PWR-delta)*2.55) );
 					}
 					oldTime = timeNow;
 				}

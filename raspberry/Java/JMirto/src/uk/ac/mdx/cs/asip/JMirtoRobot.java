@@ -234,7 +234,8 @@ public class JMirtoRobot {
 	// A main method for testing
 	public static void main(String[] args) {
 		
-		JMirtoRobot robot = new JMirtoRobot("/dev/tty.usbmodem1411");
+//		JMirtoRobot robot = new JMirtoRobot("/dev/tty.usbmodem1411");
+		JMirtoRobot robot = new JMirtoRobot("/dev/ttyAMA0");
 
 		
 		try {
@@ -247,10 +248,10 @@ public class JMirtoRobot {
 				System.out.println("Bumpers: "+robot.isPressed(0) + ","+robot.isPressed(1));
 				System.out.println("Setting motors to 50,50");
 				robot.setMotors(150, 150);
-				Thread.sleep(3000);
+				Thread.sleep(500);
 				System.out.println("Stopping motors");
 				robot.stopMotors();
-				Thread.sleep(3000);
+				Thread.sleep(500);
 			}
 /*			System.out.println("Setting motors to 50,50");
 			robot.setMotors(50, 50);

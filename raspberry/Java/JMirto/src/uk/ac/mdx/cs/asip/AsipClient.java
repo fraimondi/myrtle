@@ -15,7 +15,7 @@ public class AsipClient {
 	
 	
 	/************   BEGIN CONSTANTS DEFINITION ****************/
-	private boolean DEBUG = true; // Do you want me to print verbose debug information?
+	private boolean DEBUG = false; // Do you want me to print verbose debug information?
 	
 	private final int MAX_NUM_DIGITAL_PINS = 72; // 9 ports of 8 pins at most?
 	private final int MAX_NUM_ANALOG_PINS = 16; // Just a random number...
