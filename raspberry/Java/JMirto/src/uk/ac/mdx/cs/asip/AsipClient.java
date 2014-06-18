@@ -2,6 +2,8 @@ package uk.ac.mdx.cs.asip;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Iterator;
+import java.util.Map;
 
 import uk.ac.mdx.cs.asip.services.AsipService;
 
@@ -260,7 +262,7 @@ public class AsipClient {
     	}
     	HashMap<Integer,Integer> singlePortMap = portMapping.get(port);
     	
-    	for (HashMap.Entry<Integer, Integer> pinMap : singlePortMap.entrySet() ) {
+    	for (Map.Entry<Integer, Integer> pinMap : singlePortMap.entrySet() ) {
     		if ( (pinMap.getKey() & bitmask) != 0x0 ) {
     			digital_input_pins[pinMap.getValue()] = HIGH;    		
     	    	if (DEBUG) {
