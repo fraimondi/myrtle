@@ -18,7 +18,6 @@ public class DistanceService implements AsipService {
 	
 	// Some constants (see docs)
 	private final char REQUEST_SINGLE_DISTANCE = 'M';
-	private final char REQUEST_CONTINUOUS_DISTANCE_REPORTING = 'R';
 	private final char DISTANCE_EVENT = 'e';
 	
 	// The constructor takes the id of the distance sensor.
@@ -41,7 +40,7 @@ public class DistanceService implements AsipService {
 	}
 	
 	public void enableContinuousReporting(int interval) {
-		this.asip.getAsipWriter().write(this.serviceID+","+REQUEST_CONTINUOUS_DISTANCE_REPORTING+","+interval);
+		this.asip.getAsipWriter().write(this.serviceID+","+AsipService.AUTOEVENT_REQUEST+","+interval);
 	}
 	
 	public int getDistance() {

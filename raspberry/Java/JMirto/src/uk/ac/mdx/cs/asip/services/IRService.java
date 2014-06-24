@@ -13,7 +13,6 @@ public class IRService implements AsipService {
 	// The service should be attached to a client
 	private AsipClient asip; 
 	
-	private final char REQUEST_IR = 'R';
 	private final char TAG_IR_RESPONSE = 'e';
 
 	private int value; // value for the sensor
@@ -47,7 +46,7 @@ public class IRService implements AsipService {
 	// (use t=0 to disable reporting)
 	// Notice that this will affect all IR sensors
 	public void setReportingInterval(int t) {
-		this.asip.getAsipWriter().write(this.serviceID+","+REQUEST_IR+","+t);
+		this.asip.getAsipWriter().write(this.serviceID+","+AsipService.AUTOEVENT_REQUEST+","+t);
 	}
 	
 	public void processResponse(String message) {

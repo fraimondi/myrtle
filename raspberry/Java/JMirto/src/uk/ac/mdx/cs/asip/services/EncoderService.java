@@ -12,7 +12,6 @@ public class EncoderService implements AsipService {
 	// The service should be attached to a client
 	private AsipClient asip; 
 	
-	private final char REQUEST_ENCODER = 'R';
 	private final char TAG_ENCODER_RESPONSE = 'e';
 
 	private int count; // Count for the encoder
@@ -47,7 +46,7 @@ public class EncoderService implements AsipService {
 	// (use t=0 to disable reporting)
 	// Notice that this will affect all encoders
 	public void setReportingInterval(int t) {
-		this.asip.getAsipWriter().write(this.serviceID+","+REQUEST_ENCODER+","+t);
+		this.asip.getAsipWriter().write(this.serviceID+","+AsipService.AUTOEVENT_REQUEST+","+t);
 	}
 	
 	public void processResponse(String message) {

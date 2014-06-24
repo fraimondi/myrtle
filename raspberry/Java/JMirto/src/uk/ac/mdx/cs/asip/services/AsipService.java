@@ -8,9 +8,11 @@ package uk.ac.mdx.cs.asip.services;
  */
 public interface AsipService {
 
-	// A service must have an ID.
+	// Public constants for autoevent requests
+	public static final char AUTOEVENT_REQUEST = 'A';
 	
-	// A service should implement setter and getter for ID.
+	// A service must have an ID.
+	// A service should implement setter and getter for ID.	
 	char getServiceID();
 	void setServiceID(char id);
 	

@@ -13,7 +13,6 @@ public class BumpService implements AsipService {
 	// The service should be attached to a client
 	private AsipClient asip; 
 	
-	private final char REQUEST_BUMP = 'R';
 	private final char TAG_BUMP_RESPONSE = 'e';
 
 	private boolean pressed; // value for the sensor
@@ -47,7 +46,7 @@ public class BumpService implements AsipService {
 	// (use t=0 to disable reporting)
 	// Notice that this will affect all IR sensors
 	public void setReportingInterval(int t) {
-		this.asip.getAsipWriter().write(this.serviceID+","+REQUEST_BUMP+","+t);
+		this.asip.getAsipWriter().write(this.serviceID+","+AsipService.AUTOEVENT_REQUEST+","+t);
 	}
 	
 	public void processResponse(String message) {
