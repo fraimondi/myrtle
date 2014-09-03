@@ -72,6 +72,9 @@ public class SimpleSerialBoard {
 	public void requestPortMapping() {
 		asip.requestPortMapping();
 	}
+	public void setAutoReportInterval(int interval) {
+		asip.setAutoReportInterval(interval);
+	}
 	
 	// As described above, SimpleSerialBoard writes messages to
 	// the serial port.

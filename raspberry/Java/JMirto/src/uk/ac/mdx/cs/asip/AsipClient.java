@@ -23,9 +23,10 @@ public class AsipClient {
 	// Low-level tags for I/O service:
 	private final char IO_SERVICE 		= 'I'; // tag indicating message is for I/O service
 	private final char PIN_MODE     	= 'P'; // i/o request  to Arduino to set pin mode
-	private final char DIGITAL_WRITE	= 'D'; // i/o request  to Arduino is digitalWrite
-	private final char ANALOG_WRITE  	= 'A'; // i/o request to Arduino is analogWrite)
-	private final char PORT_DATA     	= 'P'; // i/o event from Arduino is digital port data
+	private final char DIGITAL_WRITE	= 'd'; // i/o request  to Arduino is digitalWrite
+	private final char ANALOG_WRITE  	= 'a'; // i/o request to Arduino is analogWrite
+	private final char ANALOG_DATA_REQUEST = 'A'; // i/o request to Arduino to set Autoreport to a certain value in ms
+	private final char PORT_DATA     	= 'd'; // i/o event from Arduino is digital port data
 	private final char ANALOG_VALUE  	= 'a'; // i/o event from Arduino is value of analog pin
 	private final char PORT_MAPPING		= 'M'; // i/o event from Arduino is port mapping to pins
 
@@ -157,6 +158,14 @@ public class AsipClient {
 		}
 	}
 	
+	// A method to set the autoreport interval (in ms)
+	public void setAutoReportInterval(int interval) {
+		out.write(IO_SERVICE+","+ANALOG_DATA_REQUEST+","+interval);
+		if (DEBUG) {
+			System.out.println("DEBUG: Setting autoreport interval "+IO_SERVICE+","+ANALOG_DATA_REQUEST+","+interval);
+		}
+	}
+	
 	// It is possible to add services at run-time:
 	public void addService(char serviceID, AsipService s) {
 		// If there is already a service with the same ID, we add this
@@ -206,14 +215,20 @@ public class AsipClient {
 			} else if ( input.charAt(3) == PORT_MAPPING ) {
 				processPinMapping(input);
 			} else if (input.charAt(3) == ANALOG_VALUE) {
-				int pin = Integer.parseInt(input.split(",")[2]);
-				int value = Integer.parseInt(input.split(",")[3]);
-				analog_input_pins[pin] = value;
 				if (DEBUG) {
 					System.out.println("DEBUG: received message "+input);
-					System.out.println("DEBUG: setting analog pin "+pin+" to "+value);
-				}
-			}
+				}				
+				// This is a list of strings "pin1:value1","pin2:value2",...
+				String[] pinValues = input.substring(input.indexOf("{")+1,input.indexOf("}")).split(",");
+		    	for (String pinVal: pinValues ) {
+		    		int pinID = Integer.parseInt(pinVal.split(":")[0]);
+		    		int val = Integer.parseInt(pinVal.split(":")[1]);
+		    		analog_input_pins[pinID] = val;
+					if (DEBUG) {
+						System.out.println("DEBUG: setting analog pin "+pinID+" to "+val);
+					}
+		    	}
+			}	
 			else {
 				System.out.println("Service not recognised in position 3 for I/O service: " + input);
 			}			
