@@ -99,25 +99,27 @@ public class SimpleSerialBoard {
             if(event.isRXCHAR()){//If data is available
             	try {
             		String val = serialPort.readString();
-            		//System.out.println("DEBUG: received on serial: "+val);
-            		if ( val.contains("\n")) {
-            			// If there is at least one newline, we need to process
-            			// the message (the buffer may contain previous characters).
-            			while (val.contains("\n") && (val.length()>0)) {
-            				// But remember that there could be more than one newline 
-            				// in the buffer
-            				buffer += val.substring(0,val.indexOf("\n"));
-            				//System.out.println("DEBUG: processing "+buffer);
-            				asip.processInput(buffer);
-            				buffer = "";
-            				val = val.substring(val.indexOf("\n")+1);
+            		if ( val != null ) { // Needed in win!
+            			//System.out.println("DEBUG: received on serial: "+val);
+            			if ( val.contains("\n")) {
+            				// If there is at least one newline, we need to process
+            				// the message (the buffer may contain previous characters).
+            				while (val.contains("\n") && (val.length()>0)) {
+            					// But remember that there could be more than one newline 
+            					// in the buffer
+            					buffer += val.substring(0,val.indexOf("\n"));
+            					//System.out.println("DEBUG: processing "+buffer);
+            					asip.processInput(buffer);
+            					buffer = "";
+            					val = val.substring(val.indexOf("\n")+1);
+            				}
+            				// If there is some leftover to process we add tu buffer
+            				if (val.length() > 0 ) {
+            					buffer = val;
+            				}
+            			} else {
+            				buffer += val;
             			}
-            			// If there is some leftover to process we add tu buffer
-            			if (val.length() > 0 ) {
-            				buffer = val;
-            			}
-            		} else {
-            			buffer += val;
             		}
 				} catch (SerialPortException e) {
 					// TODO Auto-generated catch block

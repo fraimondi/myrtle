@@ -40,6 +40,8 @@ public class LightSwitch extends SimpleSerialBoard {
 
 			// check if the button is pressed and the corresponding state is
 			// HIGH (1)
+			// FIXME: we should check for state changed, otherwise we flood the
+			// channel! For the moment I add a sleep(20) below.
 
 			if (buttonState == AsipClient.HIGH) {
 
@@ -51,7 +53,12 @@ public class LightSwitch extends SimpleSerialBoard {
 			}
 			;
 
-			
+			try {
+				Thread.sleep(20);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			}
 		
 	}
